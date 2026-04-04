@@ -19,6 +19,17 @@ export interface AeoPipelineEntry {
   indexedAt?: string;
 }
 
+// ── Page Status Tracker Entry ──
+export interface PageTrackerEntry {
+  id: string;
+  slug: string;
+  title: string;
+  type: 'existing' | 'aeo';
+  status: string;
+  addedAt: string;
+  updatedAt?: string;
+}
+
 // ── Daily KPI ──
 export interface DailyKPI {
   date: string;
@@ -72,6 +83,7 @@ const LS_AEO_SCORES = 'gh-cc-aeo-scores';
 const LS_WEEKLY_PERF = 'gh-cc-weekly-perf';
 const LS_GA4_TOKEN = 'gh-cc-ga4-token';
 const LS_CM_ATTRIBUTIONS = 'gh-cc-cm-attributions';
+const LS_PAGE_TRACKER = 'gh-cc-page-tracker';
 
 // ── Context ──
 interface AppState {
@@ -132,6 +144,12 @@ interface AppState {
   // Citation Monitor attributions
   cmAttributions: Record<string, string[]>;
   setCmAttributions: React.Dispatch<React.SetStateAction<Record<string, string[]>>>;
+
+  // Page Status Tracker
+  pageTracker: PageTrackerEntry[];
+  addPageToTracker: (entry: PageTrackerEntry) => void;
+  updatePageStatus: (id: string, status: string) => void;
+  removePageFromTracker: (id: string) => void;
 }
 
 const AppContext = createContext<AppState | null>(null);
@@ -157,6 +175,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [weeklyPerfData, setWeeklyPerfData] = useState<WeeklyPerfEntry[]>(() => getFromStorage(LS_WEEKLY_PERF, []));
   const [ga4Token, setGa4Token] = useState<string | null>(() => getFromStorage(LS_GA4_TOKEN, null));
   const [cmAttributions, setCmAttributions] = useState<Record<string, string[]>>(() => getFromStorage(LS_CM_ATTRIBUTIONS, {}));
+  const [pageTracker, setPageTracker] = useState<PageTrackerEntry[]>(() => getFromStorage(LS_PAGE_TRACKER, []));
 
   // Persist all shared state
   useEffect(() => { saveToStorage(LS_PIPELINE, aeoPipeline); }, [aeoPipeline]);
@@ -171,6 +190,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   useEffect(() => { saveToStorage(LS_WEEKLY_PERF, weeklyPerfData); }, [weeklyPerfData]);
   useEffect(() => { if (ga4Token) saveToStorage(LS_GA4_TOKEN, ga4Token); }, [ga4Token]);
   useEffect(() => { saveToStorage(LS_CM_ATTRIBUTIONS, cmAttributions); }, [cmAttributions]);
+  useEffect(() => { saveToStorage(LS_PAGE_TRACKER, pageTracker); }, [pageTracker]);
 
   // Theme class on body
   useEffect(() => {
@@ -231,6 +251,22 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  // Page tracker callbacks
+  const addPageToTracker = useCallback((entry: PageTrackerEntry) => {
+    setPageTracker((prev) => {
+      if (prev.find((e) => e.id === entry.id)) return prev;
+      return [...prev, entry];
+    });
+  }, []);
+
+  const updatePageStatus = useCallback((id: string, status: string) => {
+    setPageTracker((prev) => prev.map((e) => e.id === id ? { ...e, status, updatedAt: new Date().toISOString() } : e));
+  }, []);
+
+  const removePageFromTracker = useCallback((id: string) => {
+    setPageTracker((prev) => prev.filter((e) => e.id !== id));
+  }, []);
+
   return (
     <AppContext.Provider value={{
       activeTab, setActiveTab, navigateToTab, navPayload,
@@ -247,6 +283,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       weeklyPerfData, addWeeklyPerf,
       ga4Token, setGa4Token,
       cmAttributions, setCmAttributions,
+      pageTracker, addPageToTracker, updatePageStatus, removePageFromTracker,
     }}>
       {children}
     </AppContext.Provider>

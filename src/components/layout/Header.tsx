@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Sun, Moon, Bell } from 'lucide-react';
+import { Sun, Moon, Bell, ClipboardList } from 'lucide-react';
 import { TabId, TabConfig } from '@/types';
 
 const tabs: TabConfig[] = [
@@ -20,11 +20,14 @@ interface HeaderProps {
   onTabChange: (tab: TabId) => void;
   theme: 'dark' | 'light';
   onToggleTheme: () => void;
+  onTrackerToggle: () => void;
+  trackerCount?: number;
 }
 
-export default function Header({ activeTab, onTabChange, theme, onToggleTheme }: HeaderProps) {
+export default function Header({ activeTab, onTabChange, theme, onToggleTheme, onTrackerToggle, trackerCount }: HeaderProps) {
   const [bellOpen, setBellOpen] = useState(false);
   const isDark = theme === 'dark';
+  const hasTrackerItems = (trackerCount || 0) > 0;
 
   return (
     <header className="border-b border-white/[0.08] bg-white/[0.02] backdrop-blur-sm sticky top-0 z-50">
@@ -48,6 +51,10 @@ export default function Header({ activeTab, onTabChange, theme, onToggleTheme }:
                 </button>
               ))}
             </nav>
+            <button onClick={onTrackerToggle} className="p-2 rounded-xl bg-white/[0.04] text-gh-text-muted hover:bg-white/[0.08] transition-colors relative" title="Page Status Tracker">
+              <ClipboardList className="w-4 h-4" />
+              {hasTrackerItems && <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-carolina text-[8px] font-bold text-white flex items-center justify-center">{trackerCount}</span>}
+            </button>
             <button onClick={onToggleTheme} className="p-2 rounded-xl bg-white/[0.04] text-gh-text-muted hover:bg-white/[0.08] transition-colors" title={isDark ? 'Light mode' : 'Dark mode'}>
               {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
             </button>
