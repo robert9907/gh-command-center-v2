@@ -369,6 +369,7 @@ export default function IndexingPanel() {
 
   // ══════════════════════════════════════
   // BULK CHECK ALL — with progress + abort
+  // Batches state updates to avoid React crashes
   // ══════════════════════════════════════
   const checkAll = useCallback(async () => {
     const token = ga4Token || getGSCToken();
@@ -378,17 +379,85 @@ export default function IndexingPanel() {
     const total = pages.length;
     setCheckProgress({ done: 0, total });
     let checked = 0;
+
+    // Collect results, then batch-update state
+    const updates: Array<{ url: string; status: PageStatus; coverageState: string }> = [];
+    const indexedSlugs: string[] = [];
+
     for (const p of pages) {
       if (abortRef.current) break;
-      await checkGscStatus(p.url);
-      checked++;
       setCheckProgress({ done: checked, total });
+      try {
+        const resp = await fetch('https://searchconsole.googleapis.com/v1/urlInspection/index:inspect', {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ inspectionUrl: p.url, siteUrl: 'https://generationhealth.me/' }),
+        });
+        if (resp.ok) {
+          const data = await resp.json();
+          const coverageState: string = data.inspectionResult?.indexStatusResult?.coverageState || 'unknown';
+          const verdict: string = data.inspectionResult?.indexStatusResult?.verdict || '';
+          let status: PageStatus = 'unknown';
+          if (coverageState === 'Submitted and indexed' || verdict === 'PASS') {
+            status = 'indexed';
+            const slug = p.url.replace('https://generationhealth.me/', '').replace(/^\/|\/$/g, '');
+            indexedSlugs.push(slug);
+          } else if (coverageState.includes('Crawled') && coverageState.includes('not indexed')) {
+            status = 'crawled';
+          } else if (coverageState.includes('Discovered') || coverageState.includes('not indexed')) {
+            status = 'discovered';
+          } else if (coverageState.includes('error') || coverageState.includes('Error')) {
+            status = 'error';
+          }
+          updates.push({ url: p.url, status, coverageState });
+          addLog('inspect', p.url, status, coverageState);
+        } else if (resp.status === 401) {
+          addLog('inspect', p.url, 'error', 'OAuth token expired');
+          break;
+        } else {
+          addLog('inspect', p.url, 'error', `HTTP ${resp.status}`);
+        }
+      } catch (e) {
+        addLog('inspect', p.url, 'error', e instanceof Error ? e.message : String(e));
+      }
+      checked++;
+      // Batch-update state every 10 pages to show progress without crashing
+      if (checked % 10 === 0 || checked === total) {
+        const batchUpdates = [...updates];
+        updates.length = 0;
+        setPages((prev) => {
+          const next = [...prev];
+          for (const u of batchUpdates) {
+            const idx = next.findIndex((pg) => pg.url === u.url);
+            if (idx >= 0) next[idx] = { ...next[idx], status: u.status, lastCheck: new Date().toISOString(), coverageState: u.coverageState };
+          }
+          return next;
+        });
+      }
       await new Promise((r) => setTimeout(r, 1200));
     }
+
+    // Final batch for any remaining
+    if (updates.length > 0) {
+      setPages((prev) => {
+        const next = [...prev];
+        for (const u of updates) {
+          const idx = next.findIndex((pg) => pg.url === u.url);
+          if (idx >= 0) next[idx] = { ...next[idx], status: u.status, lastCheck: new Date().toISOString(), coverageState: u.coverageState };
+        }
+        return next;
+      });
+    }
+
+    // Write indexed status back to pipeline in one batch
+    if (indexedSlugs.length > 0) {
+      setAeoPipeline((prev) => prev.map((p) => indexedSlugs.includes(p.slug) && !p.indexedAt ? { ...p, indexedAt: new Date().toISOString() } : p));
+    }
+
     setChecking(false);
     setCheckProgress(null);
     addLog('bulk-check', `${checked}/${total}`, 'done', abortRef.current ? 'Aborted by user' : 'Complete');
-  }, [pages, checkGscStatus, addLog, ga4Token]);
+  }, [pages, addLog, ga4Token, setAeoPipeline]);
 
   const stopChecking = useCallback(() => { abortRef.current = true; }, []);
 
