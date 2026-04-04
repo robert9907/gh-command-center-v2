@@ -62,18 +62,30 @@ export default function OptimizePanel() {
     else { setSearchResult({ found: false, slug }); setHighlightSlug(null); }
   }, [searchQuery, liveClusters]);
 
+  // Track scan results separately (lightweight — no full HTML in state)
+  const [scanResults, setScanResults] = useState<Record<string, { score: number; total: number; pct: number }>>({});
+
   // Fetch all pages across all clusters
   const handleFetchAll = useCallback(async () => {
     const allPages = liveClusters.flatMap((c) => c.posts.filter((p) => p.status === 'done' && p.slug).map((p, i) => ({ slug: p.slug!, name: p.name, clusterId: c.id, idx: i })));
-    if (!confirm(`Fetch & scan ALL ${allPages.length} live pages?`)) return;
+    if (!confirm(`Fetch & scan ALL ${allPages.length} live pages? This may take ${Math.ceil(allPages.length * 1.5 / 60)} minutes.`)) return;
     setFetchAllProgress({ total: allPages.length, done: 0, current: 'Starting...' });
+    let successCount = 0;
     for (let i = 0; i < allPages.length; i++) {
       setFetchAllProgress({ total: allPages.length, done: i, current: allPages[i].name });
-      await fetchAndScanPage(allPages[i].slug);
-      await new Promise((r) => setTimeout(r, 800));
+      try {
+        const result = await fetchAndScanPage(allPages[i].slug);
+        if (result.success && result.scan) {
+          successCount++;
+          setScanResults((prev) => ({ ...prev, [allPages[i].slug]: { score: result.scan!.score, total: result.scan!.total, pct: result.scan!.pct } }));
+        }
+      } catch (e) {
+        console.warn(`[FetchAll] Failed: ${allPages[i].slug}`, e);
+      }
+      await new Promise((r) => setTimeout(r, 1500));
     }
-    setFetchAllProgress({ total: allPages.length, done: allPages.length, current: 'Done!' });
-    setTimeout(() => setFetchAllProgress(null), 5000);
+    setFetchAllProgress({ total: allPages.length, done: allPages.length, current: `Done! ${successCount}/${allPages.length} succeeded` });
+    setTimeout(() => setFetchAllProgress(null), 10000);
   }, [liveClusters, fetchAndScanPage]);
 
   return (

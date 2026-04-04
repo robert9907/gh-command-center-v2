@@ -248,16 +248,17 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const cleanSlug = slug.replace(/^\/+|\/+$/g, '');
     const pageUrl = `https://generationhealth.me/${cleanSlug}/`;
 
+    const processHtml = (html: string) => {
+      const result = scan67(html);
+      return { success: true as const, html, scan: result };
+    };
+
     // Strategy 1: Direct fetch (works if WP has CORS headers)
     try {
       const resp = await fetch(pageUrl, { mode: 'cors' });
       if (resp.ok) {
         const html = await resp.text();
-        if (html.length > 500) {
-          setSavedHTML((prev) => ({ ...prev, [cleanSlug]: html }));
-          const result = scan67(html);
-          return { success: true, html, scan: result };
-        }
+        if (html.length > 500) return processHtml(html);
       }
     } catch { /* CORS blocked — expected */ }
 
@@ -266,11 +267,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       const proxyResp = await fetch(`https://corsproxy.io/?${encodeURIComponent(pageUrl)}`);
       if (proxyResp.ok) {
         const html = await proxyResp.text();
-        if (html.length > 500) {
-          setSavedHTML((prev) => ({ ...prev, [cleanSlug]: html }));
-          const result = scan67(html);
-          return { success: true, html, scan: result };
-        }
+        if (html.length > 500) return processHtml(html);
       }
     } catch { /* try next */ }
 
@@ -279,11 +276,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       const r = await fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent(pageUrl)}`);
       if (r.ok) {
         const html = await r.text();
-        if (html.length > 500) {
-          setSavedHTML((prev) => ({ ...prev, [cleanSlug]: html }));
-          const result = scan67(html);
-          return { success: true, html, scan: result };
-        }
+        if (html.length > 500) return processHtml(html);
       }
     } catch { /* try next */ }
 
@@ -293,16 +286,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
       if (wpResp.ok) {
         const wpPages = await wpResp.json();
         if (Array.isArray(wpPages) && wpPages.length > 0 && wpPages[0]?.content?.rendered) {
-          const html = wpPages[0].content.rendered;
-          setSavedHTML((prev) => ({ ...prev, [cleanSlug]: html }));
-          const result = scan67(html);
-          return { success: true, html, scan: result };
+          return processHtml(wpPages[0].content.rendered);
         }
       }
     } catch { /* exhausted */ }
 
     console.warn(`[fetchAndScanPage] All strategies failed for: ${cleanSlug}`);
-    return { success: false };
+    return { success: false as const };
   }, []);
 
   // Page tracker callbacks
