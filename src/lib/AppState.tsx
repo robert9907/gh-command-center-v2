@@ -175,7 +175,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [theme, setTheme] = useState<'dark' | 'light'>(() => getFromStorage(LS_THEME, 'dark') as 'dark' | 'light');
   const [aeoPipeline, setAeoPipeline] = useState<AeoPipelineEntry[]>(() => getFromStorage(LS_PIPELINE, []));
   const [focusClusterId, setFocusClusterIdRaw] = useState<string | null>(() => getFromStorage(LS_FOCUS_CLUSTER, null));
-  const [savedHTML, setSavedHTML] = useState<Record<string, string>>(() => getFromStorage(LS_SAVED_HTML, {}));
+  const [savedHTML, setSavedHTML] = useState<Record<string, string>>({});
   const [dailyKPIs, setDailyKPIs] = useState<Record<string, DailyKPI>>(() => getFromStorage(LS_DAILY_KPI, {}));
   const [perfGoals, setPerfGoals] = useState<PerfGoals>(() => getFromStorage(LS_PERF_GOALS, { impressions: 5000, clicks: 50, calls: 10 }));
   const [projLevers, setProjLevers] = useState<ProjLevers>(() => getFromStorage(LS_PROJ_LEVERS, { pagesPublished: 0, builderOptimized: 0, backlinks: 0, aeoImprovement: 0, adsbudget: 0 }));
@@ -195,7 +195,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
   useEffect(() => { saveToStorage(LS_PIPELINE, aeoPipeline); }, [aeoPipeline]);
   useEffect(() => { saveToStorage(LS_THEME, theme); }, [theme]);
   useEffect(() => { saveToStorage(LS_FOCUS_CLUSTER, focusClusterId); }, [focusClusterId]);
-  useEffect(() => { saveToStorage(LS_SAVED_HTML, savedHTML); }, [savedHTML]);
   useEffect(() => { saveToStorage(LS_DAILY_KPI, dailyKPIs); }, [dailyKPIs]);
   useEffect(() => { saveToStorage(LS_PERF_GOALS, perfGoals); }, [perfGoals]);
   useEffect(() => { saveToStorage(LS_PROJ_LEVERS, projLevers); }, [projLevers]);
@@ -212,6 +211,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     document.body.classList.toggle('light', theme === 'light');
     document.body.classList.toggle('dark', theme === 'dark');
+    // Clean up old bloated savedHTML from localStorage
+    try { localStorage.removeItem('gh-cc-saved-html'); } catch { /* ignore */ }
   }, [theme]);
 
   const toggleTheme = useCallback(() => setTheme((t) => t === 'dark' ? 'light' : 'dark'), []);
