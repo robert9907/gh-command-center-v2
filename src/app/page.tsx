@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { AppProvider, useAppState } from '@/lib/AppState';
 import Header from '@/components/layout/Header';
 import PerformancePanel from '@/components/performance/PerformancePanel';
@@ -37,6 +37,9 @@ function Dashboard() {
 }
 
 export default function Home() {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setMounted(true); }, []);
+  if (!mounted) return <div className="min-h-screen flex items-center justify-center"><div className="text-gh-text-muted text-sm">Loading Command Center...</div></div>;
   return (
     <AppProvider>
       <Dashboard />

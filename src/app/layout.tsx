@@ -18,7 +18,7 @@ export default function RootLayout({
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
       </head>
-      <body className="text-gh-text-body">
+      <body className="text-gh-text-body" suppressHydrationWarning>
         {children}
       </body>
     </html>
