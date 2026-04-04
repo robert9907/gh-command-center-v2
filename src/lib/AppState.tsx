@@ -1,0 +1,254 @@
+'use client';
+
+import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react';
+import { getFromStorage, saveToStorage } from '@/lib/utils';
+import { scan67 } from '@/lib/scan67';
+import type { TabId } from '@/types';
+
+// ── AEO Pipeline Entry ──
+export interface AeoPipelineEntry {
+  id: string;
+  queryId: string;
+  query: string;
+  title: string;
+  slug: string;
+  html?: string;
+  deployedAt?: string;
+  socialDone?: boolean;
+  socialDoneAt?: string;
+  indexedAt?: string;
+}
+
+// ── Daily KPI ──
+export interface DailyKPI {
+  date: string;
+  adsSpend?: number;
+  clickToCall?: number;
+  gbpCalls?: number;
+  formLeads?: number;
+  cpa?: number;
+}
+
+// ── Performance Goals ──
+export interface PerfGoals {
+  impressions: number;
+  clicks: number;
+  calls: number;
+}
+
+// ── Projection Levers ──
+export interface ProjLevers {
+  pagesPublished: number;
+  builderOptimized: number;
+  backlinks: number;
+  aeoImprovement: number;
+  adsbudget: number;
+}
+
+export interface WeeklyPerfEntry {
+  weekOf: string;
+  users: number;
+  organic: number;
+  chatgpt: number;
+  direct: number;
+  social: number;
+  impressions: number;
+  clicks: number;
+  calls: number;
+  bookings: number;
+  gbpViews: number;
+}
+
+// ── localStorage keys ──
+const LS_PIPELINE = 'gh-cc-aeo-pipeline';
+const LS_THEME = 'gh-cc-theme';
+const LS_SAVED_HTML = 'gh-cc-saved-html';
+const LS_FOCUS_CLUSTER = 'gh-cc-focus-cluster';
+const LS_DAILY_KPI = 'gh-cc-dailykpi';
+const LS_PERF_GOALS = 'gh-cc-perf-goals';
+const LS_PROJ_LEVERS = 'gh-cc-proj-levers';
+const LS_GSC_DATA = 'gh-cc-gsc-data';
+const LS_AEO_SCORES = 'gh-cc-aeo-scores';
+const LS_WEEKLY_PERF = 'gh-cc-weekly-perf';
+const LS_GA4_TOKEN = 'gh-cc-ga4-token';
+const LS_CM_ATTRIBUTIONS = 'gh-cc-cm-attributions';
+
+// ── Context ──
+interface AppState {
+  // Tab navigation
+  activeTab: TabId;
+  setActiveTab: (tab: TabId) => void;
+  navigateToTab: (tab: TabId, payload?: Record<string, string>) => void;
+  navPayload: Record<string, string>;
+
+  // Theme
+  theme: 'dark' | 'light';
+  toggleTheme: () => void;
+
+  // AEO Pipeline (shared: Citation Monitor → Content Studio → Indexing)
+  aeoPipeline: AeoPipelineEntry[];
+  setAeoPipeline: React.Dispatch<React.SetStateAction<AeoPipelineEntry[]>>;
+  addToPipeline: (entry: AeoPipelineEntry) => void;
+
+  // Focus cluster
+  focusClusterId: string | null;
+  setFocusClusterId: (id: string | null) => void;
+
+  // Saved HTML per page
+  savedHTML: Record<string, string>;
+  setSavedHTML: React.Dispatch<React.SetStateAction<Record<string, string>>>;
+
+  // fetchAndScanPage
+  fetchAndScanPage: (slug: string) => Promise<{ success: boolean; html?: string; scan?: ReturnType<typeof scan67> }>;
+
+  // Daily KPIs
+  dailyKPIs: Record<string, DailyKPI>;
+  setDailyKPI: (date: string, kpi: DailyKPI) => void;
+
+  // Performance goals
+  perfGoals: PerfGoals;
+  setPerfGoals: React.Dispatch<React.SetStateAction<PerfGoals>>;
+
+  // Projection levers
+  projLevers: ProjLevers;
+  setProjLevers: React.Dispatch<React.SetStateAction<ProjLevers>>;
+
+  // GSC data
+  gscData: Record<string, unknown> | null;
+  setGscData: React.Dispatch<React.SetStateAction<Record<string, unknown> | null>>;
+
+  // AEO scores
+  aeoScores: Array<{ date: string; score: number }>;
+  setAeoScores: React.Dispatch<React.SetStateAction<Array<{ date: string; score: number }>>>;
+
+  // Editable weekly performance data
+  weeklyPerfData: WeeklyPerfEntry[];
+  addWeeklyPerf: (entry: WeeklyPerfEntry) => void;
+
+  // GA4 token
+  ga4Token: string | null;
+  setGa4Token: React.Dispatch<React.SetStateAction<string | null>>;
+
+  // Citation Monitor attributions
+  cmAttributions: Record<string, string[]>;
+  setCmAttributions: React.Dispatch<React.SetStateAction<Record<string, string[]>>>;
+}
+
+const AppContext = createContext<AppState | null>(null);
+
+export function useAppState() {
+  const ctx = useContext(AppContext);
+  if (!ctx) throw new Error('useAppState must be inside AppProvider');
+  return ctx;
+}
+
+export function AppProvider({ children }: { children: ReactNode }) {
+  const [activeTab, setActiveTab] = useState<TabId>('performance');
+  const [navPayload, setNavPayload] = useState<Record<string, string>>({});
+  const [theme, setTheme] = useState<'dark' | 'light'>(() => getFromStorage(LS_THEME, 'dark') as 'dark' | 'light');
+  const [aeoPipeline, setAeoPipeline] = useState<AeoPipelineEntry[]>(() => getFromStorage(LS_PIPELINE, []));
+  const [focusClusterId, setFocusClusterIdRaw] = useState<string | null>(() => getFromStorage(LS_FOCUS_CLUSTER, null));
+  const [savedHTML, setSavedHTML] = useState<Record<string, string>>(() => getFromStorage(LS_SAVED_HTML, {}));
+  const [dailyKPIs, setDailyKPIs] = useState<Record<string, DailyKPI>>(() => getFromStorage(LS_DAILY_KPI, {}));
+  const [perfGoals, setPerfGoals] = useState<PerfGoals>(() => getFromStorage(LS_PERF_GOALS, { impressions: 5000, clicks: 50, calls: 10 }));
+  const [projLevers, setProjLevers] = useState<ProjLevers>(() => getFromStorage(LS_PROJ_LEVERS, { pagesPublished: 0, builderOptimized: 0, backlinks: 0, aeoImprovement: 0, adsbudget: 0 }));
+  const [gscData, setGscData] = useState<Record<string, unknown> | null>(() => getFromStorage(LS_GSC_DATA, null));
+  const [aeoScores, setAeoScores] = useState<Array<{ date: string; score: number }>>(() => getFromStorage(LS_AEO_SCORES, []));
+  const [weeklyPerfData, setWeeklyPerfData] = useState<WeeklyPerfEntry[]>(() => getFromStorage(LS_WEEKLY_PERF, []));
+  const [ga4Token, setGa4Token] = useState<string | null>(() => getFromStorage(LS_GA4_TOKEN, null));
+  const [cmAttributions, setCmAttributions] = useState<Record<string, string[]>>(() => getFromStorage(LS_CM_ATTRIBUTIONS, {}));
+
+  // Persist all shared state
+  useEffect(() => { saveToStorage(LS_PIPELINE, aeoPipeline); }, [aeoPipeline]);
+  useEffect(() => { saveToStorage(LS_THEME, theme); }, [theme]);
+  useEffect(() => { saveToStorage(LS_FOCUS_CLUSTER, focusClusterId); }, [focusClusterId]);
+  useEffect(() => { saveToStorage(LS_SAVED_HTML, savedHTML); }, [savedHTML]);
+  useEffect(() => { saveToStorage(LS_DAILY_KPI, dailyKPIs); }, [dailyKPIs]);
+  useEffect(() => { saveToStorage(LS_PERF_GOALS, perfGoals); }, [perfGoals]);
+  useEffect(() => { saveToStorage(LS_PROJ_LEVERS, projLevers); }, [projLevers]);
+  useEffect(() => { if (gscData) saveToStorage(LS_GSC_DATA, gscData); }, [gscData]);
+  useEffect(() => { saveToStorage(LS_AEO_SCORES, aeoScores); }, [aeoScores]);
+  useEffect(() => { saveToStorage(LS_WEEKLY_PERF, weeklyPerfData); }, [weeklyPerfData]);
+  useEffect(() => { if (ga4Token) saveToStorage(LS_GA4_TOKEN, ga4Token); }, [ga4Token]);
+  useEffect(() => { saveToStorage(LS_CM_ATTRIBUTIONS, cmAttributions); }, [cmAttributions]);
+
+  // Theme class on body
+  useEffect(() => {
+    document.body.classList.toggle('light', theme === 'light');
+    document.body.classList.toggle('dark', theme === 'dark');
+  }, [theme]);
+
+  const toggleTheme = useCallback(() => setTheme((t) => t === 'dark' ? 'light' : 'dark'), []);
+
+  const navigateToTab = useCallback((tab: TabId, payload?: Record<string, string>) => {
+    if (payload) setNavPayload(payload);
+    setActiveTab(tab);
+  }, []);
+
+  const addToPipeline = useCallback((entry: AeoPipelineEntry) => {
+    setAeoPipeline((prev) => {
+      if (prev.find((e) => e.id === entry.id)) return prev;
+      return [...prev, entry];
+    });
+  }, []);
+
+  const setFocusClusterId = useCallback((id: string | null) => setFocusClusterIdRaw(id), []);
+
+  const setDailyKPI = useCallback((date: string, kpi: DailyKPI) => {
+    setDailyKPIs((prev) => ({ ...prev, [date]: kpi }));
+  }, []);
+
+  const addWeeklyPerf = useCallback((entry: WeeklyPerfEntry) => {
+    setWeeklyPerfData((prev) => {
+      const exists = prev.find((e) => e.weekOf === entry.weekOf);
+      if (exists) return prev.map((e) => e.weekOf === entry.weekOf ? entry : e);
+      return [...prev, entry].sort((a, b) => a.weekOf.localeCompare(b.weekOf));
+    });
+  }, []);
+
+  // fetchAndScanPage — shared function used by Optimize + Page Builder
+  const fetchAndScanPage = useCallback(async (slug: string) => {
+    try {
+      const resp = await fetch(`https://generationhealth.me/${slug}/`);
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+      const html = await resp.text();
+      // Save HTML
+      setSavedHTML((prev) => ({ ...prev, [slug]: html }));
+      // Scan
+      const result = scan67(html);
+      return { success: true, html, scan: result };
+    } catch {
+      try {
+        const resp2 = await fetch(`https://generationhealth.me/${slug}`);
+        if (!resp2.ok) throw new Error(`HTTP ${resp2.status}`);
+        const html = await resp2.text();
+        setSavedHTML((prev) => ({ ...prev, [slug]: html }));
+        const result = scan67(html);
+        return { success: true, html, scan: result };
+      } catch {
+        return { success: false };
+      }
+    }
+  }, []);
+
+  return (
+    <AppContext.Provider value={{
+      activeTab, setActiveTab, navigateToTab, navPayload,
+      theme, toggleTheme,
+      aeoPipeline, setAeoPipeline, addToPipeline,
+      focusClusterId, setFocusClusterId,
+      savedHTML, setSavedHTML,
+      fetchAndScanPage,
+      dailyKPIs, setDailyKPI,
+      perfGoals, setPerfGoals,
+      projLevers, setProjLevers,
+      gscData, setGscData,
+      aeoScores, setAeoScores,
+      weeklyPerfData, addWeeklyPerf,
+      ga4Token, setGa4Token,
+      cmAttributions, setCmAttributions,
+    }}>
+      {children}
+    </AppContext.Provider>
+  );
+}
