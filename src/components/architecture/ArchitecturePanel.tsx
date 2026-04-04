@@ -3,7 +3,6 @@
 import { useState, useMemo } from 'react';
 import { ChevronDown, ChevronRight, Check, Target } from 'lucide-react';
 import { PHASES, STD_TASKS } from '@/data/config';
-import { useTaskState } from '@/lib/useTaskState';
 import { useAppState } from '@/lib/AppState';
 import { clusters } from '@/data/clusters';
 
@@ -37,8 +36,7 @@ function NoteField({ value, onChange }: { value: string; onChange: (v: string) =
 export default function ArchitecturePanel() {
   const [phaseFilter, setPhaseFilter] = useState(0);
   const [expandedCluster, setExpandedCluster] = useState<string | null>(null);
-  const { done, isDone, toggle, getNote, setNote, recentId } = useTaskState();
-  const { focusClusterId, setFocusClusterId, navigateToTab } = useAppState();
+  const { taskDone: done, taskIsDone: isDone, taskToggle: toggle, taskGetNote: getNote, taskSetNote: setNote, taskRecentId: recentId, focusClusterId, setFocusClusterId, navigateToTab } = useAppState();
 
   const filtered = useMemo(() => {
     if (phaseFilter === 0) return clusters;

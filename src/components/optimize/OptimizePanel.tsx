@@ -5,7 +5,6 @@ import { Check, ChevronDown, ChevronRight, Search, ExternalLink, Zap, Loader2, F
 import { OPT_ITEMS, PHASES, CAT_COLORS, getPriorityScore } from '@/data/config';
 import { calendarWeeks } from '@/data/calendar';
 import { clusters } from '@/data/clusters';
-import { useTaskState } from '@/lib/useTaskState';
 import { useAppState } from '@/lib/AppState';
 import { scan67 } from '@/lib/scan67';
 
@@ -34,8 +33,7 @@ const TYPE_COLORS: Record<string, { color: string }> = {
 };
 
 export default function OptimizePanel() {
-  const { done, isDone, toggle, getNote, setNote, recentId } = useTaskState();
-  const { navigateToTab, fetchAndScanPage, savedHTML } = useAppState();
+  const { taskDone: done, taskIsDone: isDone, taskToggle: toggle, taskGetNote: getNote, taskSetNote: setNote, taskRecentId: recentId, navigateToTab, fetchAndScanPage, savedHTML } = useAppState();
   const [expandedCluster, setExpandedCluster] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResult, setSearchResult] = useState<{ found: boolean; clusterId?: string; clusterName?: string; pageName?: string; slug?: string } | null>(null);

@@ -150,6 +150,15 @@ interface AppState {
   addPageToTracker: (entry: PageTrackerEntry) => void;
   updatePageStatus: (id: string, status: string) => void;
   removePageFromTracker: (id: string) => void;
+
+  // Task completion state (shared across Architecture + Optimize)
+  taskDone: Record<string, number>;
+  taskIsDone: (id: string) => boolean;
+  taskToggle: (id: string) => void;
+  taskNotes: Record<string, string>;
+  taskGetNote: (id: string) => string;
+  taskSetNote: (id: string, value: string) => void;
+  taskRecentId: string | null;
 }
 
 const AppContext = createContext<AppState | null>(null);
@@ -177,6 +186,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [cmAttributions, setCmAttributions] = useState<Record<string, string[]>>(() => getFromStorage(LS_CM_ATTRIBUTIONS, {}));
   const [pageTracker, setPageTracker] = useState<PageTrackerEntry[]>(() => getFromStorage(LS_PAGE_TRACKER, []));
 
+  // Task completion state (was in useTaskState hook — now shared via context)
+  const [taskDone, setTaskDone] = useState<Record<string, number>>(() => getFromStorage('gh-cc-done', {}));
+  const [taskNotes, setTaskNotes] = useState<Record<string, string>>(() => getFromStorage('gh-cc-notes', {}));
+  const [taskRecentId, setTaskRecentId] = useState<string | null>(null);
+
   // Persist all shared state
   useEffect(() => { saveToStorage(LS_PIPELINE, aeoPipeline); }, [aeoPipeline]);
   useEffect(() => { saveToStorage(LS_THEME, theme); }, [theme]);
@@ -191,6 +205,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
   useEffect(() => { if (ga4Token) saveToStorage(LS_GA4_TOKEN, ga4Token); }, [ga4Token]);
   useEffect(() => { saveToStorage(LS_CM_ATTRIBUTIONS, cmAttributions); }, [cmAttributions]);
   useEffect(() => { saveToStorage(LS_PAGE_TRACKER, pageTracker); }, [pageTracker]);
+  useEffect(() => { saveToStorage('gh-cc-done', taskDone); }, [taskDone]);
+  useEffect(() => { saveToStorage('gh-cc-notes', taskNotes); }, [taskNotes]);
 
   // Theme class on body
   useEffect(() => {
@@ -228,27 +244,46 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   // fetchAndScanPage — shared function used by Optimize + Page Builder
   const fetchAndScanPage = useCallback(async (slug: string) => {
+    const cleanSlug = slug.replace(/^\/+|\/+$/g, '');
+    // Strategy 1: WP REST API pages (CORS-enabled)
     try {
-      const resp = await fetch(`https://generationhealth.me/${slug}/`);
-      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-      const html = await resp.text();
-      // Save HTML
-      setSavedHTML((prev) => ({ ...prev, [slug]: html }));
-      // Scan
-      const result = scan67(html);
-      return { success: true, html, scan: result };
-    } catch {
-      try {
-        const resp2 = await fetch(`https://generationhealth.me/${slug}`);
-        if (!resp2.ok) throw new Error(`HTTP ${resp2.status}`);
-        const html = await resp2.text();
-        setSavedHTML((prev) => ({ ...prev, [slug]: html }));
-        const result = scan67(html);
-        return { success: true, html, scan: result };
-      } catch {
-        return { success: false };
+      const wpResp = await fetch(`https://generationhealth.me/wp-json/wp/v2/pages?slug=${encodeURIComponent(cleanSlug)}&_fields=content`);
+      if (wpResp.ok) {
+        const pages = await wpResp.json();
+        if (Array.isArray(pages) && pages.length > 0 && pages[0]?.content?.rendered) {
+          const html = pages[0].content.rendered;
+          setSavedHTML((prev) => ({ ...prev, [cleanSlug]: html }));
+          const result = scan67(html);
+          return { success: true, html, scan: result };
+        }
       }
+    } catch { /* try next */ }
+    // Strategy 2: WP REST API posts
+    try {
+      const postResp = await fetch(`https://generationhealth.me/wp-json/wp/v2/posts?slug=${encodeURIComponent(cleanSlug)}&_fields=content`);
+      if (postResp.ok) {
+        const posts = await postResp.json();
+        if (Array.isArray(posts) && posts.length > 0 && posts[0]?.content?.rendered) {
+          const html = posts[0].content.rendered;
+          setSavedHTML((prev) => ({ ...prev, [cleanSlug]: html }));
+          const result = scan67(html);
+          return { success: true, html, scan: result };
+        }
+      }
+    } catch { /* try next */ }
+    // Strategy 3: CORS proxy fallback
+    for (const url of [`https://generationhealth.me/${cleanSlug}/`, `https://generationhealth.me/${cleanSlug}`]) {
+      try {
+        const r = await fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`);
+        if (r.ok) {
+          const html = await r.text();
+          setSavedHTML((prev) => ({ ...prev, [cleanSlug]: html }));
+          const result = scan67(html);
+          return { success: true, html, scan: result };
+        }
+      } catch { /* try next */ }
     }
+    return { success: false };
   }, []);
 
   // Page tracker callbacks
@@ -265,6 +300,22 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const removePageFromTracker = useCallback((id: string) => {
     setPageTracker((prev) => prev.filter((e) => e.id !== id));
+  }, []);
+
+  // Task state callbacks
+  const taskIsDone = useCallback((id: string) => !!taskDone[id], [taskDone]);
+  const taskToggle = useCallback((id: string) => {
+    setTaskDone((prev) => {
+      const next = { ...prev };
+      if (next[id]) { delete next[id]; } else { next[id] = Date.now(); }
+      return next;
+    });
+    setTaskRecentId(id);
+    setTimeout(() => setTaskRecentId(null), 1200);
+  }, []);
+  const taskGetNote = useCallback((id: string) => taskNotes[id] || '', [taskNotes]);
+  const taskSetNote = useCallback((id: string, value: string) => {
+    setTaskNotes((prev) => ({ ...prev, [id]: value }));
   }, []);
 
   return (
@@ -284,6 +335,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       ga4Token, setGa4Token,
       cmAttributions, setCmAttributions,
       pageTracker, addPageToTracker, updatePageStatus, removePageFromTracker,
+      taskDone, taskIsDone, taskToggle, taskNotes, taskGetNote, taskSetNote, taskRecentId,
     }}>
       {children}
     </AppContext.Provider>
