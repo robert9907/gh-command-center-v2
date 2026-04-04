@@ -55,7 +55,7 @@ export default function ArchitecturePanel() {
         {filtered.map((cluster) => {
           const ph = PHASES.find((p) => p.id === cluster.phase) || PHASES[0];
           const isExp = expandedCluster === cluster.id;
-          const doneCount = cluster.posts.filter((p) => p.status === 'done').length;
+          const doneCount = cluster.posts.filter((p, i) => p.status === 'done' || isDone(`cr-${cluster.id}-${i}`)).length;
           const isFocus = focusClusterId === cluster.id;
 
           return (

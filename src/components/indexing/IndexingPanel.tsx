@@ -40,7 +40,7 @@ interface LogEntry {
 // INDEXING ACCELERATOR
 // ═══════════════════════════════════════════════════
 export default function IndexingPanel() {
-  const { aeoPipeline } = useAppState();
+  const { aeoPipeline, setAeoPipeline, ga4Token, gscData } = useAppState();
 
   // ── State ──
   const [pages, setPages] = useState<IndexPage[]>(() => getFromStorage(LS_IDX_PAGES, []));
@@ -295,7 +295,7 @@ export default function IndexingPanel() {
   // GSC INDEXING API — Request indexing
   // ══════════════════════════════════════
   const requestGscIndexing = useCallback(async (url: string) => {
-    const token = getGSCToken();
+    const token = ga4Token || getGSCToken();
     if (!token) { alert('Connect via Performance → GSC OAuth first.'); return; }
     setSubmitting(true);
     try {
@@ -316,13 +316,13 @@ export default function IndexingPanel() {
       addLog('gsc-index', url, 'error', e instanceof Error ? e.message : String(e));
     }
     setSubmitting(false);
-  }, [addLog]);
+  }, [addLog, ga4Token]);
 
   // ══════════════════════════════════════
   // GSC URL INSPECTION API — Check status
   // ══════════════════════════════════════
   const checkGscStatus = useCallback(async (url: string): Promise<string> => {
-    const token = getGSCToken();
+    const token = ga4Token || getGSCToken();
     if (!token) return 'no-token';
     try {
       const resp = await fetch('https://searchconsole.googleapis.com/v1/urlInspection/index:inspect', {
@@ -346,6 +346,11 @@ export default function IndexingPanel() {
         }
         setPages((prev) => prev.map((p) => p.url === url ? { ...p, status, lastCheck: new Date().toISOString(), coverageState } : p));
         addLog('inspect', url, status, coverageState);
+        // Write indexed status back to AEO pipeline
+        if (status === 'indexed') {
+          const slug = url.replace('https://generationhealth.me/', '').replace(/^\/|\/$/g, '');
+          setAeoPipeline((prev) => prev.map((p) => p.slug === slug && !p.indexedAt ? { ...p, indexedAt: new Date().toISOString() } : p));
+        }
         return status;
       } else {
         const errText = await resp.text();
@@ -360,13 +365,13 @@ export default function IndexingPanel() {
       addLog('inspect', url, 'error', e instanceof Error ? e.message : String(e));
       return 'error';
     }
-  }, [addLog]);
+  }, [addLog, ga4Token, setAeoPipeline]);
 
   // ══════════════════════════════════════
   // BULK CHECK ALL — with progress + abort
   // ══════════════════════════════════════
   const checkAll = useCallback(async () => {
-    const token = getGSCToken();
+    const token = ga4Token || getGSCToken();
     if (!token) { alert('Connect GSC OAuth first (Performance tab → Connect GSC).'); return; }
     setChecking(true);
     abortRef.current = false;
@@ -383,7 +388,7 @@ export default function IndexingPanel() {
     setChecking(false);
     setCheckProgress(null);
     addLog('bulk-check', `${checked}/${total}`, 'done', abortRef.current ? 'Aborted by user' : 'Complete');
-  }, [pages, checkGscStatus, addLog]);
+  }, [pages, checkGscStatus, addLog, ga4Token]);
 
   const stopChecking = useCallback(() => { abortRef.current = true; }, []);
 
@@ -659,7 +664,7 @@ export default function IndexingPanel() {
                         <button onClick={() => requestGscIndexing(p.url)} disabled={submitting} className="px-2 py-1 rounded text-[10px] font-bold border border-blue-400/30 text-blue-400 hover:bg-blue-400/10 disabled:opacity-40" title="Request via GSC API">GSC</button>
                         <button onClick={() => submitIndexNow([p.url])} disabled={submitting || !indexNowKey} className="px-2 py-1 rounded text-[10px] font-bold border border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10 disabled:opacity-40" title="Submit via IndexNow">INow</button>
                         <button onClick={() => checkGscStatus(p.url)} className="px-2 py-1 rounded text-[10px] font-bold border border-purple-400/30 text-purple-400 hover:bg-purple-400/10" title="Check status">?</button>
-                        <button onClick={() => setPages((prev) => prev.map((pg) => pg.url === p.url ? { ...pg, status: 'indexed' as const } : pg))} className="px-2 py-1 rounded text-[10px] font-bold border border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10" title="Mark indexed">✓</button>
+                        <button onClick={() => { setPages((prev) => prev.map((pg) => pg.url === p.url ? { ...pg, status: 'indexed' as const, lastCheck: new Date().toISOString() } : pg)); const slug = p.url.replace('https://generationhealth.me/', '').replace(/^\/|\/$/g, ''); setAeoPipeline((prev) => prev.map((pe) => pe.slug === slug && !pe.indexedAt ? { ...pe, indexedAt: new Date().toISOString() } : pe)); }} className="px-2 py-1 rounded text-[10px] font-bold border border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10" title="Mark indexed">✓</button>
                         <a href={p.url} target="_blank" rel="noopener noreferrer" className="px-2 py-1 rounded text-[10px] border border-white/10 text-gh-text-faint hover:bg-white/[0.04] flex items-center" title="Open page"><ExternalLink className="w-3 h-3" /></a>
                         <button onClick={() => removePage(p.url)} className="px-2 py-1 rounded text-[10px] border border-red-500/20 text-red-400/60 hover:bg-red-500/10 hover:text-red-400" title="Remove"><Trash2 className="w-3 h-3" /></button>
                       </div>

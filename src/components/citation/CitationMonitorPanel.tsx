@@ -75,7 +75,7 @@ function buildAEOPageHtml(qas: AeoQA[], compareTable: CompareTable | null, slug:
 // CITATION MONITOR PANEL
 // ═══════════════════════════════════════════════════
 export default function CitationMonitorPanel() {
-  const { addToPipeline } = useAppState();
+  const { addToPipeline, aeoPipeline } = useAppState();
 
   // ── API Keys ──
   const [claudeKey, setClaudeKey] = useState(() => getFromStorage(LS_CLAUDE_KEY, ''));
@@ -320,7 +320,7 @@ export default function CitationMonitorPanel() {
       <div className="overflow-x-auto">
         <table className="w-full border-collapse">
           <thead><tr>
-            {['#', 'QUERY', 'CAT', 'CLAUDE', 'CHATGPT', 'PERPLEXITY', 'GEMINI', 'COMPETITORS', ''].map((h) => (
+            {['#', 'QUERY', 'CAT', 'STATUS', 'CLAUDE', 'CHATGPT', 'PERPLEXITY', 'GEMINI', 'COMPETITORS', ''].map((h) => (
               <th key={h} className="px-2.5 py-2 text-[10px] font-bold text-gh-text-muted uppercase tracking-wider border-b border-white/[0.06] text-left whitespace-nowrap">{h}</th>
             ))}
           </tr></thead>
@@ -332,11 +332,27 @@ export default function CitationMonitorPanel() {
               const scanned = Object.keys(results).length > 0;
               const allComps = new Set<string>();
               Object.values(results).forEach((r) => r.competitors?.forEach((c) => allComps.add(c)));
+              // Pipeline status lookup
+              const pipelineEntry = aeoPipeline.find((p) => p.queryId === q.id || p.query === q.query);
+              const isBuilt = !!pipelineEntry;
+              const isPromoted = !!(pipelineEntry?.socialDone);
+              const isIndexed = !!(pipelineEntry?.indexedAt);
               return (
-                <tr key={q.id} className={`border-b border-white/[0.04] hover:bg-white/[0.02] ${q.priority ? 'bg-nc-gold/[0.02]' : ''}`}>
+                <tr key={q.id} className={`border-b border-white/[0.04] hover:bg-white/[0.02] ${q.priority ? 'bg-nc-gold/[0.02]' : ''} ${isIndexed ? 'bg-emerald-500/[0.03]' : ''}`}>
                   <td className="px-2.5 py-2.5 text-xs text-gh-text-faint tabular-nums">{qi + 1}{q.priority && <Star className="w-2.5 h-2.5 inline ml-1 text-nc-gold" />}</td>
                   <td className="px-2.5 py-2.5"><div className="text-xs font-medium text-white">{q.query}</div></td>
                   <td className="px-2.5 py-2.5"><span className="text-[9px] font-bold px-1.5 py-0.5 rounded" style={{ background: `${cat?.color || '#6B7B8D'}18`, color: cat?.color || '#6B7B8D' }}>{cat?.name?.split(' ').slice(0, 2).join(' ')}</span></td>
+                  <td className="px-2.5 py-2.5">
+                    {isIndexed ? (
+                      <span className="inline-flex items-center gap-1 text-[9px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400"><Check className="w-2.5 h-2.5" />Indexed</span>
+                    ) : isPromoted ? (
+                      <span className="inline-flex items-center gap-1 text-[9px] font-bold px-2 py-0.5 rounded-full bg-blue-400/15 text-blue-400"><Check className="w-2.5 h-2.5" />Promoted</span>
+                    ) : isBuilt ? (
+                      <span className="inline-flex items-center gap-1 text-[9px] font-bold px-2 py-0.5 rounded-full bg-amber-400/15 text-amber-400"><Check className="w-2.5 h-2.5" />Built</span>
+                    ) : (
+                      <span className="text-[10px] text-gh-text-faint">—</span>
+                    )}
+                  </td>
                   {(['claude', 'chatgpt', 'perplexity', 'gemini'] as const).map((llm) => {
                     const r = results[llm]; if (!r) return <td key={llm} className="px-2.5 py-2.5 text-center"><span className="text-[10px] text-gh-text-faint">—</span></td>;
                     return <td key={llm} className="px-2.5 py-2.5 text-center">{r.cited ? <Check className="w-3.5 h-3.5 text-emerald-400 inline" /> : <X className="w-3.5 h-3.5 text-red-400 inline" />}</td>;
@@ -344,15 +360,15 @@ export default function CitationMonitorPanel() {
                   <td className="px-2.5 py-2.5"><div className="flex flex-wrap gap-1">{Array.from(allComps).slice(0, 3).map((c) => <span key={c} className="text-[9px] bg-white/[0.06] text-gh-text-muted px-1.5 py-0.5 rounded">{c}</span>)}</div></td>
                   <td className="px-2.5 py-2.5">
                     <div className="flex gap-1">
-                      {scanned && citedCount === 0 && (
+                      {isBuilt ? (
+                        <span className="px-2 py-1 text-[10px] font-bold text-emerald-400">✓ Done</span>
+                      ) : scanned && citedCount === 0 ? (
                         <button onClick={() => generateAEO(q.query)} disabled={aeoGenerating} className="px-2 py-1 rounded text-[10px] font-bold border border-red-400/30 text-red-400 hover:bg-red-400/10 disabled:opacity-40">Attack →</button>
-                      )}
-                      {scanned && citedCount > 0 && citedCount < 4 && (
+                      ) : scanned && citedCount > 0 && citedCount < 4 ? (
                         <button onClick={() => generateAEO(q.query)} disabled={aeoGenerating} className="px-2 py-1 rounded text-[10px] font-bold border border-amber-400/30 text-amber-400 hover:bg-amber-400/10 disabled:opacity-40">Defend →</button>
-                      )}
-                      {!scanned && (
+                      ) : !scanned ? (
                         <button onClick={() => generateAEO(q.query)} disabled={aeoGenerating} className="px-2 py-1 rounded text-[10px] font-bold border border-teal-500/30 text-teal-400 hover:bg-teal-500/10 disabled:opacity-40">+ AEO</button>
-                      )}
+                      ) : null}
                     </div>
                   </td>
                 </tr>
