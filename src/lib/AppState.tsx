@@ -245,44 +245,62 @@ export function AppProvider({ children }: { children: ReactNode }) {
   // fetchAndScanPage — shared function used by Optimize + Page Builder
   const fetchAndScanPage = useCallback(async (slug: string) => {
     const cleanSlug = slug.replace(/^\/+|\/+$/g, '');
-    // Strategy 1: WP REST API pages (CORS-enabled)
+    const pageUrl = `https://generationhealth.me/${cleanSlug}/`;
+
+    // Strategy 1: Direct fetch (works if WP has CORS headers)
+    try {
+      const resp = await fetch(pageUrl, { mode: 'cors' });
+      if (resp.ok) {
+        const html = await resp.text();
+        if (html.length > 500) {
+          setSavedHTML((prev) => ({ ...prev, [cleanSlug]: html }));
+          const result = scan67(html);
+          return { success: true, html, scan: result };
+        }
+      }
+    } catch { /* CORS blocked — expected */ }
+
+    // Strategy 2: corsproxy.io (reliable CORS proxy)
+    try {
+      const proxyResp = await fetch(`https://corsproxy.io/?${encodeURIComponent(pageUrl)}`);
+      if (proxyResp.ok) {
+        const html = await proxyResp.text();
+        if (html.length > 500) {
+          setSavedHTML((prev) => ({ ...prev, [cleanSlug]: html }));
+          const result = scan67(html);
+          return { success: true, html, scan: result };
+        }
+      }
+    } catch { /* try next */ }
+
+    // Strategy 3: allorigins fallback
+    try {
+      const r = await fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent(pageUrl)}`);
+      if (r.ok) {
+        const html = await r.text();
+        if (html.length > 500) {
+          setSavedHTML((prev) => ({ ...prev, [cleanSlug]: html }));
+          const result = scan67(html);
+          return { success: true, html, scan: result };
+        }
+      }
+    } catch { /* try next */ }
+
+    // Strategy 4: WP REST API (content only — last resort)
     try {
       const wpResp = await fetch(`https://generationhealth.me/wp-json/wp/v2/pages?slug=${encodeURIComponent(cleanSlug)}&_fields=content`);
       if (wpResp.ok) {
-        const pages = await wpResp.json();
-        if (Array.isArray(pages) && pages.length > 0 && pages[0]?.content?.rendered) {
-          const html = pages[0].content.rendered;
+        const wpPages = await wpResp.json();
+        if (Array.isArray(wpPages) && wpPages.length > 0 && wpPages[0]?.content?.rendered) {
+          const html = wpPages[0].content.rendered;
           setSavedHTML((prev) => ({ ...prev, [cleanSlug]: html }));
           const result = scan67(html);
           return { success: true, html, scan: result };
         }
       }
-    } catch { /* try next */ }
-    // Strategy 2: WP REST API posts
-    try {
-      const postResp = await fetch(`https://generationhealth.me/wp-json/wp/v2/posts?slug=${encodeURIComponent(cleanSlug)}&_fields=content`);
-      if (postResp.ok) {
-        const posts = await postResp.json();
-        if (Array.isArray(posts) && posts.length > 0 && posts[0]?.content?.rendered) {
-          const html = posts[0].content.rendered;
-          setSavedHTML((prev) => ({ ...prev, [cleanSlug]: html }));
-          const result = scan67(html);
-          return { success: true, html, scan: result };
-        }
-      }
-    } catch { /* try next */ }
-    // Strategy 3: CORS proxy fallback
-    for (const url of [`https://generationhealth.me/${cleanSlug}/`, `https://generationhealth.me/${cleanSlug}`]) {
-      try {
-        const r = await fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`);
-        if (r.ok) {
-          const html = await r.text();
-          setSavedHTML((prev) => ({ ...prev, [cleanSlug]: html }));
-          const result = scan67(html);
-          return { success: true, html, scan: result };
-        }
-      } catch { /* try next */ }
-    }
+    } catch { /* exhausted */ }
+
+    console.warn(`[fetchAndScanPage] All strategies failed for: ${cleanSlug}`);
     return { success: false };
   }, []);
 
