@@ -1,11 +1,10 @@
 'use client';
 
 import { useState, useMemo, useCallback } from 'react';
-import { ComposedChart, Bar, Line, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { Plus, Target, ArrowUpRight, ArrowDownRight, Minus, Loader2, Zap } from 'lucide-react';
+import { Plus, Target, Loader2, Zap, Calendar } from 'lucide-react';
 import { useAppState } from '@/lib/AppState';
 import { perfData as seedPerfData } from '@/data/seed';
-import { calcTrend, calcPercentChange, formatNumber, formatDateLabel, getFromStorage } from '@/lib/utils';
+import { formatNumber, getFromStorage } from '@/lib/utils';
 import { startGSCAuth, getGSCClientId, captureOAuthToken, getGSCToken } from '@/lib/gsc';
 import { AI_SYSTEM_PROMPT } from '@/lib/ai-prompt-sys';
 
@@ -69,8 +68,6 @@ export default function PerformancePanel() {
     '90d': { impr: Math.round(baseImpr * 13 * totalBoost * 1.3), clicks: Math.round(baseClicks * 13 * totalBoost * 1.4), calls: Math.round(baseCalls * 13 * adsCallBoost * 1.4) },
   };
 
-  const comparison = allPerfData.length >= 2 ? { current: allPerfData[allPerfData.length - 1], previous: allPerfData[allPerfData.length - 2] } : null;
-  const chartData = useMemo(() => allPerfData.map((w) => ({ week: formatDateLabel(w.weekOf), users: w.users, organic: w.organic, impressions: w.impressions, clicks: w.clicks })), [allPerfData]);
 
   const saveKpi = useCallback(() => { setDailyKPI(kpiDate, { date: kpiDate, adsSpend: parseFloat(kpiSpend) || undefined, clickToCall: parseInt(kpiCalls) || undefined, gbpCalls: parseInt(kpiGbp) || undefined, formLeads: parseInt(kpiLeads) || undefined, cpa: parseFloat(kpiCpa) || undefined }); setShowKpiForm(false); setKpiSpend(''); setKpiCalls(''); setKpiGbp(''); setKpiLeads(''); setKpiCpa(''); }, [kpiDate, kpiSpend, kpiCalls, kpiGbp, kpiLeads, kpiCpa, setDailyKPI]);
 
@@ -85,28 +82,47 @@ export default function PerformancePanel() {
     else alert('No OAuth Client ID configured');
   }, [setGa4Token]);
 
-  // GSC pull
+  // GSC pull — fetches 28d queries, 7d queries, and aggregate totals for both periods
   const [gscPulling, setGscPulling] = useState(false);
   const handleGscPull = useCallback(async () => {
     const token = ga4Token || getGSCToken();
     if (!token) { handleGscConnect(); return; }
     setGscPulling(true);
+    const gscEndpoint = 'https://www.googleapis.com/webmasters/v3/sites/https%3A%2F%2Fgenerationhealth.me%2F/searchAnalytics/query';
+    const headers = { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' };
+    const end = new Date(); 
+    const start28 = new Date(); start28.setDate(end.getDate() - 28);
+    const start7 = new Date(); start7.setDate(end.getDate() - 7);
+    const fmt = (d: Date) => d.toISOString().split('T')[0];
     try {
-      const end = new Date(); const start = new Date(); start.setDate(end.getDate() - 28);
-      const resp = await fetch('https://www.googleapis.com/webmasters/v3/sites/https%3A%2F%2Fgenerationhealth.me%2F/searchAnalytics/query', {
-        method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ startDate: start.toISOString().split('T')[0], endDate: end.toISOString().split('T')[0], dimensions: ['query'], rowLimit: 100 }),
-      });
-      if (!resp.ok) {
-        const errData = await resp.json().catch(() => ({}));
-        const msg = errData?.error?.message || `HTTP ${resp.status}`;
+      // 4 parallel calls: 28d queries, 28d totals (no dimensions), 7d queries, 7d totals
+      const [resp28q, resp28t, resp7q, resp7t] = await Promise.all([
+        fetch(gscEndpoint, { method: 'POST', headers, body: JSON.stringify({ startDate: fmt(start28), endDate: fmt(end), dimensions: ['query'], rowLimit: 500 }) }),
+        fetch(gscEndpoint, { method: 'POST', headers, body: JSON.stringify({ startDate: fmt(start28), endDate: fmt(end), rowLimit: 1 }) }),
+        fetch(gscEndpoint, { method: 'POST', headers, body: JSON.stringify({ startDate: fmt(start7), endDate: fmt(end), dimensions: ['query'], rowLimit: 500 }) }),
+        fetch(gscEndpoint, { method: 'POST', headers, body: JSON.stringify({ startDate: fmt(start7), endDate: fmt(end), rowLimit: 1 }) }),
+      ]);
+      // Check for auth errors on first response
+      if (!resp28q.ok) {
+        const errData = await resp28q.json().catch(() => ({}));
+        const msg = errData?.error?.message || `HTTP ${resp28q.status}`;
         alert(`GSC pull failed: ${msg}`);
-        if (resp.status === 401 || resp.status === 403) { setGa4Token(''); localStorage.removeItem('gh-cc-ga4-token'); }
+        if (resp28q.status === 401 || resp28q.status === 403) { setGa4Token(''); localStorage.removeItem('gh-cc-ga4-token'); }
         setGscPulling(false);
         return;
       }
-      const data = await resp.json();
-      setGscData({ ...data, fetchedAt: new Date().toISOString(), dateRange: '28' });
+      const [data28q, data28t, data7q, data7t] = await Promise.all([resp28q.json(), resp28t.json(), resp7q.json(), resp7t.json()]);
+      // Aggregate totals from the no-dimensions calls (these are the real site-wide numbers)
+      const agg28 = data28t.rows?.[0] || null;
+      const agg7 = data7t.rows?.[0] || null;
+      setGscData({
+        rows: data28q.rows || [],
+        rows7d: data7q.rows || [],
+        totals28: agg28 ? { clicks: agg28.clicks, impressions: agg28.impressions, ctr: agg28.ctr, position: agg28.position } : null,
+        totals7: agg7 ? { clicks: agg7.clicks, impressions: agg7.impressions, ctr: agg7.ctr, position: agg7.position } : null,
+        fetchedAt: new Date().toISOString(),
+        dateRange: '28',
+      });
     } catch (e) { alert('GSC pull failed: ' + (e instanceof Error ? e.message : String(e))); }
     setGscPulling(false);
   }, [ga4Token, handleGscConnect, setGscData, setGa4Token]);
@@ -180,19 +196,66 @@ export default function PerformancePanel() {
       {/* Projections */}
       {showLevers && <div className="card p-5 space-y-4"><div className="text-[11px] font-bold text-gh-text-muted uppercase tracking-widest">30/60/90 Projections</div><div className="grid grid-cols-5 gap-3"><div><label className="text-[10px] font-bold text-gh-text-muted block mb-1">Pages</label><input type="number" value={projLevers.pagesPublished} onChange={(e) => setProjLevers((p) => ({ ...p, pagesPublished: parseInt(e.target.value) || 0 }))} className={inputCls} /></div><div><label className="text-[10px] font-bold text-gh-text-muted block mb-1">Optimized</label><input type="number" value={projLevers.builderOptimized} onChange={(e) => setProjLevers((p) => ({ ...p, builderOptimized: parseInt(e.target.value) || 0 }))} className={inputCls} /></div><div><label className="text-[10px] font-bold text-gh-text-muted block mb-1">Backlinks</label><input type="number" value={projLevers.backlinks} onChange={(e) => setProjLevers((p) => ({ ...p, backlinks: parseInt(e.target.value) || 0 }))} className={inputCls} /></div><div><label className="text-[10px] font-bold text-gh-text-muted block mb-1">AEO</label><input type="number" value={projLevers.aeoImprovement} onChange={(e) => setProjLevers((p) => ({ ...p, aeoImprovement: parseInt(e.target.value) || 0 }))} className={inputCls} /></div><div><label className="text-[10px] font-bold text-gh-text-muted block mb-1">Ads $</label><input type="number" value={projLevers.adsbudget} onChange={(e) => setProjLevers((p) => ({ ...p, adsbudget: parseInt(e.target.value) || 0 }))} className={inputCls} /></div></div><div className="grid grid-cols-3 gap-3">{[{ label: '30 Days', d: proj['30d'] }, { label: '60 Days', d: proj['60d'] }, { label: '90 Days', d: proj['90d'] }].map((p) => (<div key={p.label} className="bg-white/[0.03] rounded-xl p-4 border border-white/[0.06]"><div className="text-xs font-bold text-white mb-2">{p.label}</div><div className="space-y-1 text-xs"><div className="flex justify-between"><span className="text-gh-text-muted">Impressions</span><span className="font-bold text-white">{formatNumber(p.d.impr)}</span></div><div className="flex justify-between"><span className="text-gh-text-muted">Clicks</span><span className="font-bold text-white">{formatNumber(p.d.clicks)}</span></div><div className="flex justify-between"><span className="text-gh-text-muted">Calls</span><span className="font-bold text-emerald-400">{p.d.calls}</span></div></div>{perfGoals.impressions > 0 && <div className="mt-2 text-[10px] text-gh-text-faint">{Math.min(100, Math.round((p.d.impr / perfGoals.impressions) * 100))}% of goal</div>}</div>))}</div></div>}
 
-      {/* GSC/GA4 Connect */}
-      {showGscConnect && <div className="card p-5 space-y-4">
-        <div className="text-[11px] font-bold text-gh-text-muted uppercase tracking-widest">GSC / GA4 Connection</div>
-        <div className="flex gap-3 items-center">
-          <button onClick={handleGscConnect} className="px-4 py-2 rounded-xl text-xs font-bold bg-carolina text-white">{ga4Token ? '✓ Connected — Reconnect' : 'Connect Google OAuth'}</button>
-          {ga4Token && <button onClick={handleGscPull} disabled={gscPulling} className="px-4 py-2 rounded-xl text-xs font-bold border border-carolina/30 text-carolina disabled:opacity-50">
-            {gscPulling ? <><Loader2 className="w-3 h-3 animate-spin inline mr-1" />Pulling...</> : 'Pull GSC Data (28d)'}
-          </button>}
-          {gscData?.fetchedAt ? <span className="text-[10px] text-gh-text-faint">{'Last: ' + new Date(String(gscData.fetchedAt)).toLocaleString()}</span> : null}
+      {/* ═══ GSC STATS — 28 DAY + 7 DAY ═══ */}
+      {showGscConnect && <div className="card p-5 space-y-5">
+        <div className="flex items-center justify-between">
+          <div className="text-[11px] font-bold text-gh-text-muted uppercase tracking-widest">Google Search Console</div>
+          <div className="flex gap-2 items-center">
+            <button onClick={handleGscConnect} className="px-3 py-1.5 rounded-lg text-[10px] font-bold bg-carolina text-white">{ga4Token ? '✓ Connected' : 'Connect OAuth'}</button>
+            {ga4Token && <button onClick={handleGscPull} disabled={gscPulling} className="px-3 py-1.5 rounded-lg text-[10px] font-bold border border-carolina/30 text-carolina disabled:opacity-50">
+              {gscPulling ? <><Loader2 className="w-3 h-3 animate-spin inline mr-1" />Pulling...</> : '🔄 Pull Data'}
+            </button>}
+          </div>
         </div>
-        {ga4Token && <div className="text-[10px] text-emerald-400">OAuth token active</div>}
+        {gscData?.fetchedAt ? <div className="text-[10px] text-gh-text-faint flex items-center gap-1"><Calendar className="w-3 h-3" />Last pulled: {new Date(String(gscData.fetchedAt)).toLocaleString()}</div> : null}
 
-        {/* GSC Top Queries Table */}
+        {/* 28-Day + 7-Day Stat Cards */}
+        {(() => {
+          const t28 = gscData?.totals28 as {clicks:number;impressions:number;ctr:number;position:number} | null;
+          const t7 = gscData?.totals7 as {clicks:number;impressions:number;ctr:number;position:number} | null;
+          if (!t28 && !t7) return <div className="text-xs text-gh-text-faint py-4 text-center">Connect OAuth and pull data to see your GSC stats</div>;
+
+          const StatCard = ({ label, period, data }: { label: string; period: string; data: {clicks:number;impressions:number;ctr:number;position:number} | null }) => {
+            if (!data) return null;
+            const posColor = data.position <= 10 ? '#4ADE80' : data.position <= 20 ? '#FFC72C' : data.position <= 50 ? '#F59E0B' : '#EF4444';
+            const ctrColor = data.ctr * 100 >= 3 ? '#4ADE80' : data.ctr * 100 >= 1.5 ? '#FFC72C' : '#EF4444';
+            return (
+              <div className="bg-white/[0.03] rounded-xl p-5 border border-white/[0.08]">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="text-xs font-bold text-white">{label}</div>
+                  <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-carolina/15 text-carolina">{period}</span>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <div className="text-[10px] font-bold text-gh-text-muted uppercase tracking-wider mb-1">Impressions</div>
+                    <div className="text-2xl font-extrabold text-white tabular-nums">{formatNumber(data.impressions)}</div>
+                  </div>
+                  <div>
+                    <div className="text-[10px] font-bold text-gh-text-muted uppercase tracking-wider mb-1">Clicks</div>
+                    <div className="text-2xl font-extrabold text-white tabular-nums">{formatNumber(data.clicks)}</div>
+                  </div>
+                  <div>
+                    <div className="text-[10px] font-bold text-gh-text-muted uppercase tracking-wider mb-1">CTR</div>
+                    <div className="text-xl font-extrabold tabular-nums" style={{ color: ctrColor }}>{(data.ctr * 100).toFixed(1)}%</div>
+                  </div>
+                  <div>
+                    <div className="text-[10px] font-bold text-gh-text-muted uppercase tracking-wider mb-1">Avg Position</div>
+                    <div className="text-xl font-extrabold tabular-nums" style={{ color: posColor }}>{data.position.toFixed(1)}</div>
+                  </div>
+                </div>
+              </div>
+            );
+          };
+
+          return (
+            <div className="grid grid-cols-2 gap-4">
+              <StatCard label="Search Performance" period="28 Days" data={t28} />
+              <StatCard label="Search Performance" period="7 Days" data={t7} />
+            </div>
+          );
+        })()}
+
+        {/* GSC Top Queries Table — 28d */}
         {(() => {
           if (!gscData?.rows || !Array.isArray(gscData.rows) || gscData.rows.length === 0) return null;
           const rows = gscData.rows as Array<{keys:string[];clicks:number;impressions:number;ctr:number;position:number}>;
@@ -233,15 +296,6 @@ export default function PerformancePanel() {
 
       {/* AEO Scores */}
       {showAeoScores && <div className="card p-5 space-y-3"><div className="text-[11px] font-bold text-gh-text-muted uppercase tracking-widest">AEO Authority Score History</div>{aeoScores.length === 0 ? <div className="text-xs text-gh-text-faint">No scores recorded yet. Run a Citation Monitor scan to generate scores.</div> : <div className="space-y-1">{aeoScores.map((s, i) => <div key={i} className="flex justify-between text-xs py-1 border-b border-white/[0.04]"><span className="text-gh-text-muted">{s.date}</span><span className="font-bold text-carolina">{s.score}</span></div>)}</div>}</div>}
-
-      {/* ═══ GROWTH CHART ═══ */}
-      <div className="card p-5">
-        <div className="flex items-center justify-between mb-4"><div><h2 className="text-sm font-bold text-white">Organic Growth</h2><p className="text-[11px] text-gh-text-muted">{allPerfData.length} weeks tracked</p></div><div className="flex gap-4 text-[10px] font-semibold"><span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-carolina" /><span className="text-gh-text-muted">Users</span></span><span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-emerald-400" /><span className="text-gh-text-muted">Organic</span></span><span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-nc-gold" /><span className="text-gh-text-muted">Impressions</span></span></div></div>
-        <div className="h-64"><ResponsiveContainer width="100%" height="100%"><ComposedChart data={chartData} margin={{ top: 5, right: 10, left: -10, bottom: 5 }}><CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" /><XAxis dataKey="week" tick={{ fill: '#6B7B8D', fontSize: 10 }} tickLine={false} axisLine={{ stroke: 'rgba(255,255,255,0.08)' }} interval={2} /><YAxis yAxisId="left" tick={{ fill: '#6B7B8D', fontSize: 10 }} tickLine={false} axisLine={false} /><YAxis yAxisId="right" orientation="right" tick={{ fill: '#6B7B8D', fontSize: 10 }} tickLine={false} axisLine={false} /><Tooltip contentStyle={{ background: '#1A2840', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '10px', fontSize: '11px', color: '#E8ECF0' }} /><Area yAxisId="right" type="monotone" dataKey="impressions" stroke="#FFC72C" strokeWidth={1.5} fill="rgba(255,199,44,0.08)" /><Bar yAxisId="left" dataKey="users" fill="#4B9CD3" radius={[4, 4, 0, 0]} /><Line yAxisId="left" type="monotone" dataKey="organic" stroke="#4ADE80" strokeWidth={2} dot={{ r: 2, fill: '#4ADE80' }} /></ComposedChart></ResponsiveContainer></div>
-      </div>
-
-      {/* Week-over-week */}
-      {comparison && <div className="card p-5"><div className="text-sm font-bold text-white mb-3">Week-over-Week</div><div className="space-y-2">{[{ label: 'Users', cur: comparison.current.users, prev: comparison.previous.users }, { label: 'Organic', cur: comparison.current.organic, prev: comparison.previous.organic }, { label: 'Impressions', cur: comparison.current.impressions, prev: comparison.previous.impressions }, { label: 'Clicks', cur: comparison.current.clicks, prev: comparison.previous.clicks }].map((r) => { const pct = calcPercentChange(r.cur, r.prev); const trend = calcTrend(r.cur, r.prev); const Icon = trend === 'up' ? ArrowUpRight : trend === 'down' ? ArrowDownRight : Minus; const color = trend === 'up' ? 'text-emerald-400' : trend === 'down' ? 'text-red-400' : 'text-amber-400'; return <div key={r.label} className="flex items-center justify-between py-2 border-b border-white/[0.04] last:border-0"><span className="text-xs text-gh-text-soft">{r.label}</span><div className="flex items-center gap-3"><span className="text-sm font-bold text-white tabular-nums">{formatNumber(r.cur)}</span><span className={`flex items-center gap-0.5 text-[11px] font-semibold ${color}`}><Icon className="w-3 h-3" />{Math.abs(pct)}%</span></div></div>; })}</div></div>}
     </div>
   );
 }

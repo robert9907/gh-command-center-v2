@@ -19,9 +19,39 @@ const CAT_ORDER = ['AEO', 'SEO', 'E-E-A-T', 'CONTENT', 'VQA', 'CONV', 'COMP', 'C
 
 // ── Fetch live page HTML ──
 async function fetchPageHTML(slug: string): Promise<string | null> {
-  for (const url of [`https://generationhealth.me/${slug}/`, `https://generationhealth.me/${slug}`]) {
-    try { const r = await fetch(url); if (r.ok) return await r.text(); } catch { /* try next */ }
+  // Clean slug — remove leading/trailing slashes
+  const cleanSlug = slug.replace(/^\/+|\/+$/g, '');
+  
+  // Strategy 1: WP REST API (CORS-enabled by default)
+  try {
+    const wpResp = await fetch(`https://generationhealth.me/wp-json/wp/v2/pages?slug=${encodeURIComponent(cleanSlug)}&_fields=content`);
+    if (wpResp.ok) {
+      const pages = await wpResp.json();
+      if (Array.isArray(pages) && pages.length > 0 && pages[0]?.content?.rendered) {
+        return pages[0].content.rendered;
+      }
+    }
+  } catch { /* try next strategy */ }
+
+  // Strategy 2: Try posts endpoint (some content may be posts, not pages)
+  try {
+    const postResp = await fetch(`https://generationhealth.me/wp-json/wp/v2/posts?slug=${encodeURIComponent(cleanSlug)}&_fields=content`);
+    if (postResp.ok) {
+      const posts = await postResp.json();
+      if (Array.isArray(posts) && posts.length > 0 && posts[0]?.content?.rendered) {
+        return posts[0].content.rendered;
+      }
+    }
+  } catch { /* try next strategy */ }
+
+  // Strategy 3: CORS proxy fallback for full HTML
+  for (const url of [`https://generationhealth.me/${cleanSlug}/`, `https://generationhealth.me/${cleanSlug}`]) {
+    try {
+      const r = await fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`);
+      if (r.ok) return await r.text();
+    } catch { /* try next */ }
   }
+
   return null;
 }
 
