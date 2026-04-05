@@ -367,12 +367,52 @@ export default function PageBuilderPanel() {
     setZoneApplied({});
   }, [pageHtml, zoneApplied, appliedCount, pageType]);
 
+  // ── Build final HTML with zones injected (pure, no state mutation) ──
+  const buildFinalHtml = useCallback((): string => {
+    if (!pageHtml) return '';
+    if (appliedCount === 0) return pageHtml;
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(pageHtml.includes('<html') ? pageHtml : `<html><body>${pageHtml}</body></html>`, 'text/html');
+    const hSel = 'h2,.gh-stats-strip,.gh-deadline-list,.gh-related,.gh-faq,.gh-trust-strip,.gh-last-updated,.gh-cta-modal,.gh-footer-trust';
+    const BAD_CLS = ['gh-hero', 'gh-cta-modal', 'gh-cta-card', 'gh-author', 'gh-author-header', 'gh-faq-item', 'gh-nepq-block', 'gh-tip', 'gh-answer', 'gh-warning', 'gh-trust-badge', 'gh-trust-strip'];
+    const headings = Array.from(doc.querySelectorAll(hSel)).filter((el) => {
+      let n = el.parentNode as HTMLElement | null;
+      while (n && n.tagName?.toLowerCase() !== 'body') {
+        if (n.classList) { for (const cls of BAD_CLS) { if (n.classList.contains(cls)) return false; } }
+        n = n.parentNode as HTMLElement | null;
+      }
+      return true;
+    });
+    const usedIdx: number[] = [];
+    const zoneHeadingMap: Record<string, number> = {};
+    ZONES.forEach((z, i) => {
+      if (!zoneApplied[z.id]) return;
+      const idx = Math.floor(i / ZONES.length * headings.length);
+      let found = -1;
+      for (let j = idx; j < headings.length; j++) { if (!usedIdx.includes(j)) { found = j; break; } }
+      if (found === -1) { for (let k = idx - 1; k >= 0; k--) { if (!usedIdx.includes(k)) { found = k; break; } } }
+      if (found > -1) { usedIdx.push(found); zoneHeadingMap[z.id] = found; }
+    });
+    const zonesWithHeadings = ZONES.filter((z) => zoneApplied[z.id] && zoneHeadingMap[z.id] !== undefined);
+    zonesWithHeadings.slice().reverse().forEach((z) => {
+      const heading = headings[zoneHeadingMap[z.id]];
+      if (!heading?.parentNode) return;
+      const d = zoneApplied[z.id];
+      const blockHtml = `<div class="gh-nepq-block" style="padding:28px 32px;background:rgba(13,148,136,0.06);border-left:4px solid #0D9488;margin:32px 0"><p style="font-size:17px;font-weight:700;font-style:italic;color:#1A2332;margin:0 0 12px;line-height:1.6">\u201c${d.q}\u201d</p><p style="font-size:17px;line-height:1.78;color:#3A4553;margin:0">${d.a}</p></div>`;
+      const blockEl = doc.createElement('div');
+      blockEl.innerHTML = blockHtml;
+      if (blockEl.firstChild) heading.parentNode.insertBefore(blockEl.firstChild, heading);
+    });
+    const body = doc.querySelector('body');
+    return body ? body.innerHTML : doc.documentElement.outerHTML;
+  }, [pageHtml, zoneApplied, appliedCount]);
+
   // ── Copy / Download ──
-  const copyHtml = useCallback(() => { navigator.clipboard.writeText(pageHtml); setCopied(true); setTimeout(() => setCopied(false), 2000); }, [pageHtml]);
+  const copyHtml = useCallback(() => { navigator.clipboard.writeText(buildFinalHtml()); setCopied(true); setTimeout(() => setCopied(false), 2000); }, [buildFinalHtml]);
   const downloadHtml = useCallback(() => {
     const s = selectedPage?.slug || customSlug || 'page';
-    const b = new Blob([pageHtml], { type: 'text/html' }); const u = URL.createObjectURL(b); const a = document.createElement('a'); a.href = u; a.download = `${s}.html`; a.click(); URL.revokeObjectURL(u);
-  }, [pageHtml, selectedPage, customSlug]);
+    const b = new Blob([buildFinalHtml()], { type: 'text/html' }); const u = URL.createObjectURL(b); const a = document.createElement('a'); a.href = u; a.download = `${s}.html`; a.click(); URL.revokeObjectURL(u);
+  }, [buildFinalHtml, selectedPage, customSlug]);
 
   // ── AI section call helper ──
   const callAiSection = useCallback(async (prompt: string, label: string) => {
