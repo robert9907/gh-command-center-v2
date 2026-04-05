@@ -260,6 +260,146 @@ export default function PageBuilderPanel() {
         if (!result.includes('Updated')) result = result.replace(/(gh-footer-trust[^>]*>)/i, '$1\n<p style="font-size:11px;color:#6B7B8D;margin-bottom:8px"><strong>Last updated April 2026</strong></p>');
       }
 
+      // ── Visual normalization pass ──
+      // Fixes: photo placeholders, raw author text, checkmark lists, broken tip labels,
+      // section spacing, duplicate author cards. Runs on every generation.
+      try {
+        const nrmParser = new DOMParser();
+        const nrmDoc = nrmParser.parseFromString(result.includes('<html') ? result : `<html><body>${result}</body></html>`, 'text/html');
+        const nrmBody = nrmDoc.querySelector('body');
+        if (nrmBody) {
+          // 1. Strip photo placeholder text nodes (e.g. "[Rob Simm Photo Placeholder]")
+          const walker = nrmDoc.createTreeWalker(nrmBody, NodeFilter.SHOW_TEXT);
+          const toRemove: Text[] = [];
+          let tn: Node | null;
+          while ((tn = walker.nextNode())) {
+            const txt = (tn as Text).textContent || '';
+            if (/\[\s*(rob\s*simm\s*)?photo\s*placeholder\s*\]/i.test(txt)) {
+              (tn as Text).textContent = txt.replace(/\[\s*(rob\s*simm\s*)?photo\s*placeholder\s*\]/gi, '').trim();
+              if (!(tn as Text).textContent) toRemove.push(tn as Text);
+            }
+          }
+          toRemove.forEach((n) => n.parentNode?.removeChild(n));
+
+          // 2. Remove raw unstyled "Rob Simm / NC License" bio blocks that land mid-article.
+          // Heuristic: a paragraph or div containing both "NC License" and a phone number, NOT inside .gh-author.
+          const rawBioCandidates = Array.from(nrmBody.querySelectorAll('p, div'));
+          rawBioCandidates.forEach((el) => {
+            const text = el.textContent || '';
+            const hasLicense = /NC\s*License\s*#?\s*10447418/i.test(text);
+            const hasPhone = /828[\s.\-]?761[\s.\-]?3326/.test(text);
+            const hasName = /Rob\s*Simm/i.test(text);
+            const insideAuthor = el.closest('.gh-author, .gh-footer-trust');
+            if (hasLicense && (hasPhone || hasName) && !insideAuthor) {
+              // Walk up to nearest block container and strip the whole thing
+              let target: Element = el;
+              let parent = el.parentElement;
+              while (parent && parent !== nrmBody && parent.children.length <= 4 && (parent.textContent || '').length < 600) {
+                target = parent;
+                parent = parent.parentElement;
+              }
+              target.remove();
+            }
+          });
+
+          // 3. Convert checkmark-prefixed lines into proper checklist <ul>.
+          // Pattern: consecutive <p> or text lines starting with ✓ / ✔ / ✔️
+          const checkRe = /^\s*[\u2713\u2714\u2705](\ufe0f)?\s+/;
+          const paras = Array.from(nrmBody.querySelectorAll('p'));
+          let i = 0;
+          while (i < paras.length) {
+            const p = paras[i];
+            if (checkRe.test(p.textContent || '')) {
+              // Found a run start
+              const runItems: string[] = [];
+              let j = i;
+              while (j < paras.length && checkRe.test(paras[j].textContent || '')) {
+                runItems.push((paras[j].textContent || '').replace(checkRe, '').trim());
+                j++;
+              }
+              if (runItems.length >= 2) {
+                const ul = nrmDoc.createElement('ul');
+                ul.className = 'gh-checklist';
+                ul.setAttribute('style', 'list-style:none;padding:0;margin:24px 0;font-family:\'DM Sans\',sans-serif');
+                runItems.forEach((itemText) => {
+                  const li = nrmDoc.createElement('li');
+                  li.setAttribute('style', 'padding:10px 0 10px 32px;position:relative;font-size:16px;line-height:1.7;color:#1A2332;border-bottom:1px solid #E5E7EB');
+                  li.innerHTML = `<span style="position:absolute;left:0;top:12px;width:20px;height:20px;border-radius:50%;background:#0D9488;color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:12px;font-weight:700">✓</span>${itemText}`;
+                  ul.appendChild(li);
+                });
+                paras[i].parentNode?.insertBefore(ul, paras[i]);
+                for (let k = i; k < j; k++) paras[k].remove();
+              }
+              i = j;
+            } else {
+              i++;
+            }
+          }
+
+          // 4. Also handle checkmarks inside a single <p> with <br> separators.
+          Array.from(nrmBody.querySelectorAll('p')).forEach((p) => {
+            const html = p.innerHTML;
+            if (!/[\u2713\u2714\u2705]/.test(html)) return;
+            const parts = html.split(/<br\s*\/?\s*>/i).map((s) => s.trim()).filter(Boolean);
+            if (parts.length >= 2 && parts.every((s) => checkRe.test(s.replace(/<[^>]+>/g, '')))) {
+              const ul = nrmDoc.createElement('ul');
+              ul.className = 'gh-checklist';
+              ul.setAttribute('style', 'list-style:none;padding:0;margin:24px 0;font-family:\'DM Sans\',sans-serif');
+              parts.forEach((part) => {
+                const clean = part.replace(/<[^>]+>/g, '').replace(checkRe, '').trim();
+                const li = nrmDoc.createElement('li');
+                li.setAttribute('style', 'padding:10px 0 10px 32px;position:relative;font-size:16px;line-height:1.7;color:#1A2332;border-bottom:1px solid #E5E7EB');
+                li.innerHTML = `<span style="position:absolute;left:0;top:12px;width:20px;height:20px;border-radius:50%;background:#0D9488;color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:12px;font-weight:700">✓</span>${clean}`;
+                ul.appendChild(li);
+              });
+              p.replaceWith(ul);
+            }
+          });
+
+          // 5. Fix broken tip labels (e.g. "✔️WATER" or "💧WATER" as orphan text/inline).
+          // Wrap label + following content into a proper .gh-tip card.
+          const tipLabelRe = /^\s*[\u2713\u2714\u2705\ud83d\udca7\ud83d\udca1\u26a0]+(\ufe0f)?\s*(WATER|TIP|NOTE|WARNING|RED\s*FLAG|WATCH\s*OUT)\s*:?\s*/i;
+          Array.from(nrmBody.querySelectorAll('p, div')).forEach((el) => {
+            if (el.closest('.gh-tip, .gh-warning, .gh-nepq-block, .gh-author')) return;
+            const txt = (el.textContent || '').trim();
+            const m = txt.match(tipLabelRe);
+            if (m && txt.length < 400) {
+              const label = m[2].toUpperCase();
+              const body = txt.replace(tipLabelRe, '').trim();
+              if (!body) return;
+              const tip = nrmDoc.createElement('div');
+              tip.className = 'gh-tip';
+              tip.setAttribute('style', 'max-width:720px;padding:20px 24px;border-left:4px solid #0D9488;background:#F0FDFA;border-radius:0 12px 12px 0;margin:24px 0;font-family:\'DM Sans\',sans-serif');
+              tip.innerHTML = `<p style="font-size:12px;font-weight:800;color:#0D9488;margin:0 0 6px;letter-spacing:0.08em">💡 ${label}</p><p style="font-size:15px;line-height:1.7;color:#1A2332;margin:0">${body}</p>`;
+              el.replaceWith(tip);
+            }
+          });
+
+          // 6. Heading spacing — ensure h2/h3 have breathing room after preceding blocks
+          Array.from(nrmBody.querySelectorAll('h2, h3')).forEach((h) => {
+            const prev = h.previousElementSibling;
+            if (!prev) return;
+            const tag = prev.tagName.toLowerCase();
+            if (tag === 'h2' || tag === 'h3' || tag === 'h1') return;
+            const existing = h.getAttribute('style') || '';
+            if (!/margin-top/i.test(existing)) {
+              const mt = h.tagName === 'H2' ? '56px' : '40px';
+              h.setAttribute('style', `${existing};margin-top:${mt};margin-bottom:16px`.replace(/^;/, ''));
+            }
+          });
+
+          // 7. Deduplicate author cards — keep only the last one
+          const authors = Array.from(nrmBody.querySelectorAll('.gh-author'));
+          if (authors.length > 1) {
+            for (let k = 0; k < authors.length - 1; k++) authors[k].remove();
+          }
+
+          result = nrmBody.innerHTML;
+        }
+      } catch (normErr) {
+        console.warn('Normalization pass failed (non-fatal):', normErr);
+      }
+
       setPageHtml(result);
       setBuildProgress('Scanning...');
       const sr = scan67(result, pageType);
