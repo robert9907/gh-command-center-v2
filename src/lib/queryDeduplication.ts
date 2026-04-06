@@ -70,7 +70,7 @@ export function normalizeQuery(query: string): string {
   }
 
   // Strip punctuation — keep only letters, digits, and whitespace.
-  s = s.replace(/[^\p{L}\p{N}\s]/gu, ' ');
+  s = s.replace(/[^a-zA-Z0-9\s]/g, ' ');
 
   // Collapse whitespace.
   s = s.replace(/\s+/g, ' ').trim();
