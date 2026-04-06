@@ -170,3 +170,61 @@ body.light header {
   border-bottom-color: rgba(0,0,0,0.08) !important;
   backdrop-filter: blur(12px);
 }
+
+/* ===== AEO 3.0 Citation Monitor — scoped dark override v3 ===== */
+/* Every selector is prefixed with body.light to beat body.light .card */
+body.light .gh-aeo3-monitor,
+.gh-aeo3-monitor {
+  background: #0b0f1a !important;
+  color: #e5e7eb !important;
+  min-height: 600px;
+}
+body.light .gh-aeo3-monitor .card,
+.gh-aeo3-monitor .card {
+  background: rgba(255, 255, 255, 0.04) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  color: #e5e7eb !important;
+  box-shadow: none !important;
+}
+body.light .gh-aeo3-monitor .card p,
+body.light .gh-aeo3-monitor .card span,
+body.light .gh-aeo3-monitor .card div,
+body.light .gh-aeo3-monitor .card li,
+body.light .gh-aeo3-monitor p,
+body.light .gh-aeo3-monitor li {
+  color: #e5e7eb !important;
+}
+body.light .gh-aeo3-monitor h1,
+body.light .gh-aeo3-monitor h2,
+body.light .gh-aeo3-monitor h3,
+body.light .gh-aeo3-monitor h4,
+body.light .gh-aeo3-monitor h5,
+body.light .gh-aeo3-monitor h6 {
+  color: #ffffff !important;
+}
+body.light .gh-aeo3-monitor label {
+  color: #cbd5e1 !important;
+}
+body.light .gh-aeo3-monitor input,
+body.light .gh-aeo3-monitor select,
+body.light .gh-aeo3-monitor textarea {
+  background: rgba(255, 255, 255, 0.05) !important;
+  color: #e5e7eb !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+}
+body.light .gh-aeo3-monitor input::placeholder,
+body.light .gh-aeo3-monitor textarea::placeholder {
+  color: rgba(229, 231, 235, 0.45) !important;
+}
+body.light .gh-aeo3-monitor button {
+  color: #e5e7eb;
+}
+/* Preserve intent badges, status pills, and stat numbers */
+body.light .gh-aeo3-monitor [class*="badge"],
+body.light .gh-aeo3-monitor [class*="pill"],
+body.light .gh-aeo3-monitor [data-intent],
+body.light .gh-aeo3-monitor [data-badge],
+body.light .gh-aeo3-monitor [data-stat-value] {
+  color: unset !important;
+}
+/* ===== end AEO 3.0 override ===== */
