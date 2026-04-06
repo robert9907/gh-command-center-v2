@@ -33,7 +33,7 @@ const TYPE_COLORS: Record<string, { color: string }> = {
 };
 
 export default function OptimizePanel() {
-  const { taskDone: done, taskIsDone: isDone, taskToggle: toggle, taskGetNote: getNote, taskSetNote: setNote, taskRecentId: recentId, navigateToTab, fetchAndScanPage, savedHTML } = useAppState();
+  const { taskDone: done, taskIsDone: isDone, taskToggle: toggle, taskGetNote: getNote, taskSetNote: setNote, taskRecentId: recentId, navigateToTab, fetchAndScanPage, savedHTML, scanScores } = useAppState();
   const [expandedCluster, setExpandedCluster] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResult, setSearchResult] = useState<{ found: boolean; clusterId?: string; clusterName?: string; pageName?: string; slug?: string } | null>(null);
@@ -62,8 +62,7 @@ export default function OptimizePanel() {
     else { setSearchResult({ found: false, slug }); setHighlightSlug(null); }
   }, [searchQuery, liveClusters]);
 
-  // Track scan results separately (lightweight — no full HTML in state)
-  const [scanResults, setScanResults] = useState<Record<string, { score: number; total: number; pct: number }>>({});
+  // Scan results now come from AppState (persisted to localStorage as 'gh-cc-scan-scores')
 
   // Fetch all pages across all clusters
   const handleFetchAll = useCallback(async () => {
@@ -77,7 +76,7 @@ export default function OptimizePanel() {
         const result = await fetchAndScanPage(allPages[i].slug);
         if (result.success && result.scan) {
           successCount++;
-          setScanResults((prev) => ({ ...prev, [allPages[i].slug]: { score: result.scan!.score, total: result.scan!.total, pct: result.scan!.pct } }));
+          // scanScores is persisted by AppState's fetchAndScanPage automatically
         }
       } catch (e) {
         console.warn(`[FetchAll] Failed: ${allPages[i].slug}`, e);

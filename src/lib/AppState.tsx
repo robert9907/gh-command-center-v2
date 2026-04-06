@@ -3,6 +3,7 @@
 import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react';
 import { getFromStorage, saveToStorage } from '@/lib/utils';
 import { scan67 } from '@/lib/scan67';
+import { setHTML as idbSetHTML, getHTML as idbGetHTML, getAllSlugs as idbGetAllSlugs } from '@/lib/htmlStore';
 import type { TabId } from '@/types';
 
 // ── AEO Pipeline Entry ──
@@ -84,6 +85,7 @@ const LS_WEEKLY_PERF = 'gh-cc-weekly-perf';
 const LS_GA4_TOKEN = 'gh-cc-ga4-token';
 const LS_CM_ATTRIBUTIONS = 'gh-cc-cm-attributions';
 const LS_PAGE_TRACKER = 'gh-cc-page-tracker';
+const LS_SCAN_SCORES = 'gh-cc-scan-scores';
 
 // ── Context ──
 interface AppState {
@@ -110,8 +112,14 @@ interface AppState {
   savedHTML: Record<string, string>;
   setSavedHTML: React.Dispatch<React.SetStateAction<Record<string, string>>>;
 
-  // fetchAndScanPage
+  // Persisted scan scores per slug (survives refresh)
+  scanScores: Record<string, { score: number; total: number; pct: number; scannedAt: string }>;
+
+  // fetchAndScanPage — fetches live page HTML, scans it, and persists to IndexedDB
   fetchAndScanPage: (slug: string) => Promise<{ success: boolean; html?: string; scan?: ReturnType<typeof scan67> }>;
+
+  // loadHTMLFromStore — async load of saved HTML from IndexedDB by slug
+  loadHTMLFromStore: (slug: string) => Promise<string | null>;
 
   // Daily KPIs
   dailyKPIs: Record<string, DailyKPI>;
@@ -176,6 +184,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [aeoPipeline, setAeoPipeline] = useState<AeoPipelineEntry[]>(() => getFromStorage(LS_PIPELINE, []));
   const [focusClusterId, setFocusClusterIdRaw] = useState<string | null>(() => getFromStorage(LS_FOCUS_CLUSTER, null));
   const [savedHTML, setSavedHTML] = useState<Record<string, string>>({});
+  const [scanScores, setScanScores] = useState<Record<string, { score: number; total: number; pct: number; scannedAt: string }>>(() => getFromStorage(LS_SCAN_SCORES, {}));
   const [dailyKPIs, setDailyKPIs] = useState<Record<string, DailyKPI>>(() => getFromStorage(LS_DAILY_KPI, {}));
   const [perfGoals, setPerfGoals] = useState<PerfGoals>(() => getFromStorage(LS_PERF_GOALS, { impressions: 5000, clicks: 50, calls: 10 }));
   const [projLevers, setProjLevers] = useState<ProjLevers>(() => getFromStorage(LS_PROJ_LEVERS, { pagesPublished: 0, builderOptimized: 0, backlinks: 0, aeoImprovement: 0, adsbudget: 0 }));
@@ -206,13 +215,31 @@ export function AppProvider({ children }: { children: ReactNode }) {
   useEffect(() => { saveToStorage(LS_PAGE_TRACKER, pageTracker); }, [pageTracker]);
   useEffect(() => { saveToStorage('gh-cc-done', taskDone); }, [taskDone]);
   useEffect(() => { saveToStorage('gh-cc-notes', taskNotes); }, [taskNotes]);
+  useEffect(() => { saveToStorage(LS_SCAN_SCORES, scanScores); }, [scanScores]);
+
+  // Hydrate savedHTML map from IndexedDB on mount so the UI knows which pages
+  // have been previously fetched (the actual HTML stays in IndexedDB; this map
+  // is just a presence indicator + small in-memory cache for the current session).
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const slugs = await idbGetAllSlugs();
+        if (cancelled) return;
+        const presence: Record<string, string> = {};
+        for (const s of slugs) presence[s] = '__indexeddb__';
+        setSavedHTML((prev) => ({ ...presence, ...prev }));
+      } catch (err) {
+        console.warn('[AppState] Failed to hydrate savedHTML from IndexedDB:', err);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
 
   // Theme class on body
   useEffect(() => {
     document.body.classList.toggle('light', theme === 'light');
     document.body.classList.toggle('dark', theme === 'dark');
-    // Clean up old bloated savedHTML from localStorage
-    try { localStorage.removeItem('gh-cc-saved-html'); } catch { /* ignore */ }
   }, [theme]);
 
   const toggleTheme = useCallback(() => setTheme((t) => t === 'dark' ? 'light' : 'dark'), []);
@@ -248,8 +275,30 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const cleanSlug = slug.replace(/^\/+|\/+$/g, '');
     const pageUrl = `https://generationhealth.me/${cleanSlug}/`;
 
-    const processHtml = (html: string) => {
+    const processHtml = async (html: string) => {
       const result = scan67(html);
+      setScanScores((prev) => ({
+        ...prev,
+        [cleanSlug]: {
+          score: result.score,
+          total: result.total,
+          pct: result.pct,
+          scannedAt: new Date().toISOString(),
+        },
+      }));
+      setSavedHTML((prev) => ({ ...prev, [cleanSlug]: html }));
+      try {
+        await idbSetHTML(cleanSlug, html);
+      } catch (err) {
+        console.warn(`[fetchAndScanPage] IndexedDB write failed for ${cleanSlug}:`, err);
+      }
+      try {
+        const existing = JSON.parse(localStorage.getItem('gh-cc-saved-html') || '{}');
+        existing[cleanSlug] = html;
+        localStorage.setItem('gh-cc-saved-html', JSON.stringify(existing));
+      } catch {
+        // QuotaExceededError — IndexedDB is source of truth, ignore
+      }
       return { success: true as const, html, scan: result };
     };
 
@@ -258,7 +307,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       const resp = await fetch(pageUrl, { mode: 'cors' });
       if (resp.ok) {
         const html = await resp.text();
-        if (html.length > 500) return processHtml(html);
+        if (html.length > 500) return await processHtml(html);
       }
     } catch { /* CORS blocked — expected */ }
 
@@ -267,7 +316,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       const proxyResp = await fetch(`https://corsproxy.io/?${encodeURIComponent(pageUrl)}`);
       if (proxyResp.ok) {
         const html = await proxyResp.text();
-        if (html.length > 500) return processHtml(html);
+        if (html.length > 500) return await processHtml(html);
       }
     } catch { /* try next */ }
 
@@ -276,7 +325,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       const r = await fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent(pageUrl)}`);
       if (r.ok) {
         const html = await r.text();
-        if (html.length > 500) return processHtml(html);
+        if (html.length > 500) return await processHtml(html);
       }
     } catch { /* try next */ }
 
@@ -286,13 +335,29 @@ export function AppProvider({ children }: { children: ReactNode }) {
       if (wpResp.ok) {
         const wpPages = await wpResp.json();
         if (Array.isArray(wpPages) && wpPages.length > 0 && wpPages[0]?.content?.rendered) {
-          return processHtml(wpPages[0].content.rendered);
+          return await processHtml(wpPages[0].content.rendered);
         }
       }
     } catch { /* exhausted */ }
 
     console.warn(`[fetchAndScanPage] All strategies failed for: ${cleanSlug}`);
     return { success: false as const };
+  }, []);
+
+  // loadHTMLFromStore — async read from IndexedDB by slug. Used by Page Builder
+  // and other consumers that need the full HTML payload (not just presence).
+  const loadHTMLFromStore = useCallback(async (slug: string): Promise<string | null> => {
+    const cleanSlug = slug.replace(/^\/+|\/+$/g, '');
+    try {
+      const html = await idbGetHTML(cleanSlug);
+      if (html) {
+        setSavedHTML((prev) => ({ ...prev, [cleanSlug]: html }));
+      }
+      return html;
+    } catch (err) {
+      console.warn(`[loadHTMLFromStore] Failed for ${cleanSlug}:`, err);
+      return null;
+    }
   }, []);
 
   // Page tracker callbacks
@@ -334,7 +399,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
       aeoPipeline, setAeoPipeline, addToPipeline,
       focusClusterId, setFocusClusterId,
       savedHTML, setSavedHTML,
+      scanScores,
       fetchAndScanPage,
+      loadHTMLFromStore,
       dailyKPIs, setDailyKPI,
       perfGoals, setPerfGoals,
       projLevers, setProjLevers,
