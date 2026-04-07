@@ -1038,11 +1038,10 @@ export const AEO_PAGE_TEMPLATE: string = `<!DOCTYPE html>
             <div style="margin-bottom: 48px;">
                 <h3 style="font-size: 21px; font-weight: 600; color: var(--text-primary); margin-bottom: 24px; text-align: center;">Related Medicare Guides</h3>
                 <div style="display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; font-size: 15px;">
-                    <a href="https://generationhealth.me/medicare-plans-in-{{county_slug}}-nc/" style="color: var(--gh-blue); text-decoration: none; padding: 8px 16px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); transition: all 0.2s;">Medicare Plans in {{county}} NC</a>
                     <a href="https://generationhealth.me/medicare-enrollment-in-north-carolina/" style="color: var(--gh-blue); text-decoration: none; padding: 8px 16px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); transition: all 0.2s;">Medicare Enrollment in NC</a>
                     <a href="https://generationhealth.me/compare-medicare-plans-in-north-carolina/" style="color: var(--gh-blue); text-decoration: none; padding: 8px 16px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); transition: all 0.2s;">Compare Medicare Plans</a>
-                    <a href="https://generationhealth.me/medigap-plan-g-vs-plan-n-north-carolina/" style="color: var(--gh-blue); text-decoration: none; padding: 8px 16px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); transition: all 0.2s;">Medigap Plan G vs N</a>
-                    <a href="https://generationhealth.me/medicare-costs-north-carolina-2026-complete-guide/" style="color: var(--gh-blue); text-decoration: none; padding: 8px 16px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); transition: all 0.2s;">Medicare Costs NC 2026</a>
+                    <a href="https://generationhealth.me/medigap-plans-in-north-carolina-plan-g-vs-plan-n/" style="color: var(--gh-blue); text-decoration: none; padding: 8px 16px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); transition: all 0.2s;">Medigap Plan G vs N</a>
+                    <a href="https://generationhealth.me/medicare-cost-comparison-nc/" style="color: var(--gh-blue); text-decoration: none; padding: 8px 16px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); transition: all 0.2s;">Medicare Costs NC 2026</a>
                 </div>
             </div>
             
