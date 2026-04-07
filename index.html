@@ -4255,6 +4255,86 @@ function getField(data, name) {
 
 /**
 
+
+// ═══════════════════════════════════════════════════════════════════════════
+// CONTEXTUAL LINK MAP — AEO Internal Linking
+// ═══════════════════════════════════════════════════════════════════════════
+// Phrases listed here get auto-linked in generated AEO page body copy.
+// Rules: longest phrase matches first, each URL used only once per page,
+// existing <a> tags and <style>/<script> blocks are never touched.
+//
+// To add: { phrase: 'your phrase', url: 'https://generationhealth.me/slug/' }
+// Longer/more specific phrases must come before shorter ones.
+//
+// Last updated: April 7, 2026
+// ═══════════════════════════════════════════════════════════════════════════
+
+const CONTEXTUAL_LINKS = [
+  // Medigap (specific before general)
+  { phrase: 'Medigap Plan G',          url: 'https://generationhealth.me/medigap-plans-in-north-carolina-plan-g-vs-plan-n/' },
+  { phrase: 'Medigap Plan N',          url: 'https://generationhealth.me/medigap-plans-in-north-carolina-plan-g-vs-plan-n/' },
+  { phrase: 'Medigap',                 url: 'https://generationhealth.me/medigap-plans-in-north-carolina-plan-g-vs-plan-n/' },
+  // Medicare Advantage
+  { phrase: 'Medicare Advantage',      url: 'https://generationhealth.me/how-to-compare-medicare-advantage-plans-in-north-carolina/' },
+  // Enrollment periods
+  { phrase: 'Special Enrollment Period', url: 'https://generationhealth.me/medicare-advantage-quotes-nc/' },
+  { phrase: 'Annual Enrollment Period',  url: 'https://generationhealth.me/medicare-advantage-quotes-nc/' },
+  // Plan mechanics
+  { phrase: 'drug formularies',        url: 'https://generationhealth.me/whats-the-best-insurance-to-go-with-medicare/' },
+  { phrase: 'prior authorization',     url: 'https://generationhealth.me/how-to-compare-medicare-advantage-plans-in-north-carolina/' },
+  { phrase: 'Part D',                  url: 'https://generationhealth.me/medicare-plans-in-north-carolina/' },
+  // Enrollment / quotes
+  { phrase: 'compare plans',           url: 'https://generationhealth.me/free-medicare-quotes-online/' },
+  { phrase: 'Medicare enrollment',     url: 'https://generationhealth.me/how-to-sign-up-for-medicare-parts-a-and-b/' },
+  // ── Add new links below as pages go live ─────────────────────────────
+  // { phrase: 'ACA subsidy',           url: 'https://generationhealth.me/your-aca-page/' },
+  // { phrase: 'turning 65',            url: 'https://generationhealth.me/your-turning-65-page/' },
+  // { phrase: 'late enrollment penalty', url: 'https://generationhealth.me/your-penalty-page/' },
+  // { phrase: 'out-of-pocket maximum', url: 'https://generationhealth.me/your-costs-page/' },
+];
+
+function injectContextualLinks(html) {
+  const sorted = [...CONTEXTUAL_LINKS].sort((a, b) => b.phrase.length - a.phrase.length);
+  const usedUrls = new Set();
+
+  // Mask <style>/<script> blocks
+  const blockPlaceholders = [];
+  let result = html.replace(/<(style|script)[\s\S]*?<\/>/gi, (match) => {
+    const idx = blockPlaceholders.length;
+    blockPlaceholders.push(match);
+    return ` BLOCK${idx} `;
+  });
+
+  // Mask existing <a> tags
+  const linkPlaceholders = [];
+  result = result.replace(/<a[\s\S]*?<\/a>/gi, (match) => {
+    const idx = linkPlaceholders.length;
+    linkPlaceholders.push(match);
+    return ` LINK${idx} `;
+  });
+
+  // Inject links
+  for (const { phrase, url } of sorted) {
+    if (usedUrls.has(url)) continue;
+    if (!result.includes(phrase)) continue;
+    const escaped = phrase.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const regex = new RegExp(escaped);
+    const linked = result.replace(
+      regex,
+      `<a href="${url}" style="color: var(--gh-blue); text-decoration: underline; text-decoration-color: rgba(0,113,227,0.3); text-underline-offset: 2px;">${phrase}</a>`
+    );
+    if (linked !== result) {
+      usedUrls.add(url);
+      result = linked;
+    }
+  }
+
+  // Restore masked blocks
+  result = result.replace(/ LINK(\d+) /g, (_, i) => linkPlaceholders[Number(i)]);
+  result = result.replace(/ BLOCK(\d+) /g, (_, i) => blockPlaceholders[Number(i)]);
+  return result;
+}
+
 // ═══════════════════════════════════════════════════════════════════════════
 // LIVE PAGE REGISTRY — AEO Internal Linking
 // ═══════════════════════════════════════════════════════════════════════════
@@ -6336,6 +6416,7 @@ function PageGenerationModal({ query, onClose, onGenerated }) {
     let html = '';
     try {
       html = renderTemplate(TEMPLATE_HTML, data);
+      html = injectContextualLinks(html);
       setGeneratedHtml(html);
       setGenerateStep('done');
     } catch (err) {
