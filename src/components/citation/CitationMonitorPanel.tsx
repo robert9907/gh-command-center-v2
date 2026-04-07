@@ -326,6 +326,9 @@ function QueueTab({ queue, setQueue, apiKeys }: QueueTabProps) {
   };
 
   // ── mutations ──
+  const handleRefresh = (id: string) => {
+    updateQuery(id, { pipelineStatus: 'not_built', lastBuilt: undefined });
+  };
   const handleDelete = (id: string) => {
     setQueue((q) => q.filter((x) => x.id !== id));
     setSelectedIds((prev) => {
@@ -787,7 +790,7 @@ function QueueTab({ queue, setQueue, apiKeys }: QueueTabProps) {
               onGeneratePage={handleGeneratePage}
               onCopyEmbed={handleCopyEmbed}
               onEdit={handleEdit}
-              onDelete={handleDelete}
+              onRefresh={handleRefresh}
             />
           ))
         )}

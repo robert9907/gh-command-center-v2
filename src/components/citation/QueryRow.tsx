@@ -133,7 +133,7 @@ export interface QueryRowProps {
   onGeneratePage: (query: QueryCandidate) => void;
   onCopyEmbed: (query: QueryCandidate) => void;
   onEdit: (query: QueryCandidate) => void;
-  onDelete: (id: string) => void;
+  onRefresh: (id: string) => void;
 }
 
 export default function QueryRow({
@@ -145,7 +145,7 @@ export default function QueryRow({
   onGeneratePage,
   onCopyEmbed,
   onEdit,
-  onDelete,
+  onRefresh,
 }: QueryRowProps) {
   const [hovered, setHovered] = useState(false);
   const intent = INTENT_STYLES[query.intent] || INTENT_STYLES.low;
@@ -405,13 +405,13 @@ export default function QueryRow({
           <Edit2 size={15} />
         </IconButton>
         <IconButton
-          title="Delete query"
-          onClick={() => onDelete(query.id)}
+          title="Reset to Not Built"
+          onClick={() => onRefresh(query.id)}
           disabled={isTesting}
           ariaLabel="Delete query"
           danger
         >
-          <Trash2 size={15} />
+          <RefreshCw size={15} />
         </IconButton>
       </div>
     </div>
