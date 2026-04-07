@@ -1,33 +1,36 @@
-import { isPublished } from '@/data/knownPages';
 /**
  * templateEngine.ts
  *
  * Variable replacement engine for GH AEO county landing pages.
  *
  * Supported syntax:
- *   {{field}}                           — simple field lookup (e.g. {{county}})
- *                                          For array fields, joins with ", "
- *   {{arrayField[N]}}                   — array index lookup (e.g. {{hospitals[0]}})
- *   {{#each arrayField}}...{{/each}}    — block iteration; inside the block,
- *                                          {{this}} refers to the current item
+ *   {{field}}                           — simple field lookup
+ *   {{arrayField[N]}}                   — array index lookup
+ *   {{#each arrayField}}...{{/each}}    — block iteration
  *
- * Design notes:
- * - Pure function, no I/O. Takes a template string + county data object, returns HTML.
- * - Missing variables throw a TemplateRenderError so Chat 6 fails loudly in CI
- *   rather than silently publishing "{{hospitals[0]}}" to WordPress.
+ * LIVE PAGE AWARENESS:
+ * When iterating neighboring_counties, the engine checks each county
+ * against the LIVE_COUNTY_SLUGS registry in livePages.ts.
+ * - Live counties  → rendered as <a href="...">County</a>
+ * - Unlive counties → rendered as plain text (no broken links)
+ *
+ * This prevents 404s in the neighboring counties block, which is
+ * critical for AEO — AI engines treat broken links as a trust signal.
  */
 
+import { getLiveCountyUrl } from './livePages';
+
 export interface CountyData {
-  county: string;                    // "Durham"
-  state: string;                     // "North Carolina"
-  state_abbr: string;                // "NC"
-  health_system: string;             // "Duke Health"
-  hospitals: string[];               // ["Duke University Hospital", "Duke Raleigh Hospital", ...]
-  specialties: string[];             // ["Cancer Care (Duke Cancer Institute)", "Heart Care (Duke Heart Center)", ...]
-  neighboring_counties: string[];    // ["Wake", "Orange", "Granville", ...]
-  metro_area: string;                // "Research Triangle" (or "" for rural)
-  population: string;                // "324000"
-  cities: string[];                  // ["Durham", "Chapel Hill"]
+  county: string;
+  state: string;
+  state_abbr: string;
+  health_system: string;
+  hospitals: string[];
+  specialties: string[];
+  neighboring_counties: string[];
+  metro_area: string;
+  population: string;
+  cities: string[];
 }
 
 export class TemplateRenderError extends Error {
@@ -38,11 +41,6 @@ export class TemplateRenderError extends Error {
 }
 
 function getField(data: CountyData, name: string): unknown {
-  // Synthetic computed field: county_slug is derived from county.
-  //   "Durham"      → "durham"
-  //   "New Hanover" → "new-hanover"
-  // This exists so URL hrefs in the template (e.g. /medicare-plans-in-{{county_slug}}-nc/)
-  // produce valid slugs without requiring a redundant slug field in every JSON.
   if (name === 'county_slug') {
     return data.county.toLowerCase().replace(/\s+/g, '-');
   }
@@ -52,7 +50,13 @@ function getField(data: CountyData, name: string): unknown {
 
 /**
  * Render {{#each arrayField}}...{{/each}} blocks.
- * Inside the block body, {{this}} refers to the current string item.
+ *
+ * Special behavior for neighboring_counties:
+ * Each item is checked against LIVE_COUNTY_SLUGS.
+ * If live  → {{this_slug}} and {{this}} render normally (template uses them to build <a> tags)
+ * If dead  → the entire block body is replaced with plain county name text,
+ *            wrapped in a <span> so AI crawlers still see the county name
+ *            but no broken link is output.
  */
 function renderEachBlocks(template: string, data: CountyData): string {
   const eachRegex = /\{\{#each\s+(\w+)\}\}([\s\S]*?)\{\{\/each\}\}/g;
@@ -66,6 +70,8 @@ function renderEachBlocks(template: string, data: CountyData): string {
       );
     }
 
+    const isNeighborBlock = arrayName === 'neighboring_counties';
+
     return arr
       .map((item) => {
         if (item === undefined || item === null) {
@@ -75,11 +81,18 @@ function renderEachBlocks(template: string, data: CountyData): string {
           );
         }
         const itemStr = String(item);
-        // Compute a URL-safe slug for string items so templates can build
-        // hrefs like /medicare-agents-in-{{this_slug}}-county-nc/ without
-        // requiring parallel slug arrays in every JSON.
         const itemSlug = itemStr.toLowerCase().replace(/\s+/g, '-');
-        if (!isPublished(`medicare-agents-in-${itemSlug}-county-nc`)) return '';
+
+        // Live-page gate for neighboring counties
+        if (isNeighborBlock) {
+          const liveUrl = getLiveCountyUrl(itemSlug);
+          if (!liveUrl) {
+            // County page doesn't exist yet — render as plain text, no link
+            return `<span style="color: var(--text-secondary); padding: 8px 16px; background: var(--surface); border: 1px solid var(--border-light); border-radius: var(--radius-sm); font-size: 15px;">${itemStr}</span>\n                    `;
+          }
+          // County is live — render normally using template body
+        }
+
         return body
           .replace(/\{\{this_slug\}\}/g, () => itemSlug)
           .replace(/\{\{this\}\}/g, () => itemStr);
@@ -88,9 +101,6 @@ function renderEachBlocks(template: string, data: CountyData): string {
   });
 }
 
-/**
- * Replace {{arrayField[N]}} array index references.
- */
 function renderArrayIndexes(template: string, data: CountyData): string {
   const arrayIndexRegex = /\{\{(\w+)\[(\d+)\]\}\}/g;
 
@@ -120,11 +130,6 @@ function renderArrayIndexes(template: string, data: CountyData): string {
   });
 }
 
-/**
- * Replace simple {{field}} references.
- * Arrays get joined with ", " for convenience
- * (e.g. {{neighboring_counties}} → "Wake, Orange, Granville").
- */
 function renderSimpleVars(template: string, data: CountyData): string {
   const varRegex = /\{\{(\w+)\}\}/g;
 
@@ -159,9 +164,6 @@ function renderSimpleVars(template: string, data: CountyData): string {
   });
 }
 
-/**
- * Main entry point. Render a template string against county data.
- */
 export function renderTemplate(template: string, data: CountyData): string {
   let output = renderEachBlocks(template, data);
   output = renderArrayIndexes(output, data);
