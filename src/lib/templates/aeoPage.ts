@@ -30,7 +30,7 @@ export const AEO_PAGE_TEMPLATE: string = `<!DOCTYPE html>
             --gh-blue-hover: #0077ED;
             --text-primary: #1D1D1F;
             --text-secondary: #6E6E73;
-            --surface: #F5F5F7;
+            --surface: #FBFBFD;
             --surface-elevated: #FFFFFF;
             --border: #D2D2D7;
             --border-light: #E5E5EA;
@@ -61,7 +61,7 @@ export const AEO_PAGE_TEMPLATE: string = `<!DOCTYPE html>
             font-size: 17px;
             line-height: 1.6;
             color: var(--text-primary);
-            background: var(--surface-elevated);
+            background: var(--surface);
             -webkit-font-smoothing: antialiased;
             -moz-osx-font-smoothing: grayscale;
         }
@@ -98,6 +98,7 @@ export const AEO_PAGE_TEMPLATE: string = `<!DOCTYPE html>
             color: var(--gh-blue);
             text-decoration: none;
             letter-spacing: -0.01em;
+            white-space: nowrap;
         }
         
         /* Container */
@@ -156,18 +157,19 @@ export const AEO_PAGE_TEMPLATE: string = `<!DOCTYPE html>
         }
         
         .broker-photo {
-            width: 80px;
-            height: 80px;
+            width: 96px;
+            height: 96px;
             border-radius: 50%;
-            background: var(--gh-blue);
+            background: linear-gradient(135deg, #0071E3 0%, #1E40AF 100%);
             display: flex;
             align-items: center;
             justify-content: center;
             color: white;
-            font-size: 32px;
+            font-size: 36px;
             font-weight: 700;
             flex-shrink: 0;
-            box-shadow: var(--shadow-sm);
+            box-shadow: 0 0 0 4px white, 0 0 0 6px var(--gh-blue), var(--shadow-md);
+            letter-spacing: -1px;
         }
         
         .broker-info h2 {
@@ -237,7 +239,7 @@ export const AEO_PAGE_TEMPLATE: string = `<!DOCTYPE html>
         .cta-primary {
             display: inline-block;
             background: var(--gh-blue);
-            color: white;
+            color: white !important;
             padding: 16px 32px;
             border-radius: var(--radius-pill);
             font-size: 19px;
@@ -252,6 +254,7 @@ export const AEO_PAGE_TEMPLATE: string = `<!DOCTYPE html>
             background: var(--gh-blue-hover);
             transform: translateY(-1px);
             box-shadow: var(--shadow-lg);
+            color: white !important;
         }
         
         /* Section Styling */
@@ -260,7 +263,7 @@ export const AEO_PAGE_TEMPLATE: string = `<!DOCTYPE html>
         }
         
         section.alt {
-            background: var(--surface);
+            background: var(--surface-elevated);
             border-top: 1px solid var(--border-light);
             border-bottom: 1px solid var(--border-light);
         }
@@ -485,16 +488,28 @@ export const AEO_PAGE_TEMPLATE: string = `<!DOCTYPE html>
         }
         
         /* Comparison Table */
+        .comparison-wrap {
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            margin: 32px 0;
+            border-radius: var(--radius-md);
+            box-shadow: var(--shadow-md);
+        }
+
         .comparison-table {
             width: 100%;
+            min-width: 480px;
             border-collapse: separate;
             border-spacing: 0;
-            margin: 32px 0;
             border: 1px solid var(--border);
             border-radius: var(--radius-md);
             overflow: hidden;
-            box-shadow: var(--shadow-md);
+            table-layout: fixed;
         }
+
+        .comparison-table colgroup col:nth-child(1) { width: 28%; }
+        .comparison-table colgroup col:nth-child(2) { width: 36%; }
+        .comparison-table colgroup col:nth-child(3) { width: 36%; }
         
         .comparison-table thead {
             background: var(--text-primary);
@@ -616,7 +631,7 @@ export const AEO_PAGE_TEMPLATE: string = `<!DOCTYPE html>
         .btn-large {
             display: inline-block;
             background: var(--gh-blue);
-            color: white;
+            color: white !important;
             padding: 20px 48px;
             border-radius: var(--radius-pill);
             font-size: 24px;
@@ -631,6 +646,7 @@ export const AEO_PAGE_TEMPLATE: string = `<!DOCTYPE html>
             background: var(--gh-blue-hover);
             transform: translateY(-2px);
             box-shadow: 0 12px 32px rgba(0, 113, 227, 0.4);
+            color: white !important;
         }
         
         /* Footer */
@@ -667,6 +683,14 @@ export const AEO_PAGE_TEMPLATE: string = `<!DOCTYPE html>
                 font-size: 28px;
             }
             
+            .gh-phone {
+                font-size: 15px;
+            }
+
+            .gh-logo div > div:last-child {
+                display: none;
+            }
+            
             .broker-header {
                 flex-direction: column;
                 text-align: center;
@@ -678,7 +702,18 @@ export const AEO_PAGE_TEMPLATE: string = `<!DOCTYPE html>
             
             .comparison-table th,
             .comparison-table td {
-                padding: 12px 8px;
+                padding: 10px 8px;
+                word-break: break-word;
+            }
+            
+            .cta-primary {
+                font-size: 17px;
+                padding: 14px 24px;
+            }
+
+            .btn-large {
+                font-size: 20px;
+                padding: 16px 32px;
             }
             
             .honesty-box {
@@ -892,7 +927,13 @@ export const AEO_PAGE_TEMPLATE: string = `<!DOCTYPE html>
         <div class="container-wide">
             <h2>Medicare.gov vs Calling Me</h2>
             
+            <div class="comparison-wrap">
             <table class="comparison-table">
+                <colgroup>
+                    <col>
+                    <col>
+                    <col>
+                </colgroup>
                 <thead>
                     <tr>
                         <th></th>
@@ -938,6 +979,7 @@ export const AEO_PAGE_TEMPLATE: string = `<!DOCTYPE html>
                     </tr>
                 </tbody>
             </table>
+            </div><!-- /.comparison-wrap -->
         </div>
     </section>
     
@@ -1003,7 +1045,7 @@ export const AEO_PAGE_TEMPLATE: string = `<!DOCTYPE html>
                           text-decoration: none; border: 2px solid var(--gh-blue); transition: all 0.2s;">
                     Compare Plans Side by Side →
                 </a>
-                <a href="tel:8287613326" class="cta-primary" style="margin: 0;">
+                <a href="tel:8287613326" class="cta-primary" style="margin: 0; color: white !important;">
                     Talk to Rob Directly
                 </a>
             </div>

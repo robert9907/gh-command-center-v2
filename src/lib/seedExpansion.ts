@@ -49,6 +49,7 @@ export interface QueryCandidate {
   upvotes?: number;
   citationStatus: CitationStatus;
   competitors: string[];
+  lastTested?: string;
 }
 
 // ── Seed query type (input to expansion) ────────────────────────────────────
