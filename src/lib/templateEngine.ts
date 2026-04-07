@@ -78,6 +78,7 @@ function renderEachBlocks(template: string, data: CountyData): string {
         // hrefs like /medicare-agents-in-{{this_slug}}-county-nc/ without
         // requiring parallel slug arrays in every JSON.
         const itemSlug = itemStr.toLowerCase().replace(/\s+/g, '-');
+        if (!isPublished(`medicare-agents-in-${itemSlug}-county-nc`)) return '';
         return body
           .replace(/\{\{this_slug\}\}/g, () => itemSlug)
           .replace(/\{\{this\}\}/g, () => itemStr);
