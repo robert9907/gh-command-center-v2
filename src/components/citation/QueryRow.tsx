@@ -29,7 +29,7 @@ import {
   FileText,
   ClipboardCopy,
   Edit2,
-  Trash2,
+  RefreshCw,
 } from 'lucide-react';
 import type { QueryCandidate, QuerySource } from '@/lib/seedExpansion';
 
