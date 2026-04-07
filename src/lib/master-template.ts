@@ -755,7 +755,7 @@ article li::before{content:'';position:absolute;left:0;top:10px;width:8px;height
 .gh-county-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;}
 .gh-clink{display:flex;align-items:center;gap:5px;padding:9px 12px;background:var(--white);border:1px solid rgba(0,0,0,.06);border-radius:var(--r-md);font-size:13px;font-weight:600;color:var(--carolina);text-decoration:none;transition:all 180ms var(--ease);}
 .gh-clink:hover{background:var(--blue-50);border-color:var(--carolina);}
-.gh-clink::before{content:"\\1F4CD";font-size:10px;}
+.gh-clink::before{content:"→";font-size:12px;margin-right:4px;}
 
 
 /* ════════════════════════
