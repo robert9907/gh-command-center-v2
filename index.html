@@ -4311,8 +4311,8 @@ function renderEachBlocks(template, data) {
         if (isNeighborBlock) {
           const liveUrl = getLiveCountyUrl(itemSlug);
           if (!liveUrl) {
-            // Page not live yet — render as plain text, no broken link
-            return `<span style="color: var(--text-secondary); padding: 8px 16px; background: var(--surface); border: 1px solid var(--border-light); border-radius: var(--radius-sm); font-size: 15px;">${itemStr}</span>`;
+            // Page not live yet — skip entirely, no broken link, no grey button
+            return '';
           }
           // Page is live — render as confirmed <a> link
           return `<a href="${liveUrl}" style="color: var(--gh-blue); text-decoration: none; padding: 8px 16px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm);">${itemStr}</a>`;
@@ -5278,61 +5278,74 @@ const TEMPLATE_HTML = `
             font-weight: 600;
         }
         
-        /* Comparison Table */
-        .comparison-table {
-            width: 100%;
-            border-collapse: separate;
-            border-spacing: 0;
+        /* Comparison Cards — mobile-first, no horizontal scroll */
+        .comparison-cards {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
             margin: 32px 0;
+        }
+
+        .comparison-card {
             border: 1px solid var(--border);
             border-radius: var(--radius-md);
             overflow: hidden;
-            box-shadow: var(--shadow-md);
+            box-shadow: var(--shadow-sm);
         }
-        
-        .comparison-table thead {
+
+        .comparison-card-label {
             background: var(--text-primary);
-        }
-        
-        .comparison-table th {
-            padding: 16px;
-            text-align: left;
-            font-weight: 600;
-            font-size: 15px;
             color: white;
+            font-size: 12px;
+            font-weight: 700;
             text-transform: uppercase;
-            letter-spacing: 0.5px;
+            letter-spacing: 0.8px;
+            padding: 8px 16px;
         }
-        
-        .comparison-table td {
-            padding: 20px 16px;
-            border-bottom: 1px solid var(--border-light);
-            font-size: 15px;
-            line-height: 1.6;
+
+        .comparison-card-body {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
         }
-        
-        .comparison-table td:first-child {
-            font-weight: 600;
-            color: var(--text-primary);
+
+        .comparison-col {
+            padding: 16px;
         }
-        
-        .comparison-table td:not(:first-child) {
-            color: var(--text-secondary);
-        }
-        
-        .comparison-table tbody tr:last-child td {
-            border-bottom: none;
-        }
-        
-        .comparison-table tbody tr:hover {
+
+        .comparison-col:first-child {
+            border-right: 1px solid var(--border-light);
             background: var(--surface);
         }
-        
-        .comparison-table .highlight {
-            background: #EFF6FF;
-            font-weight: 600;
+
+        .comparison-col-header {
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.6px;
+            margin-bottom: 8px;
+        }
+
+        .comparison-col:first-child .comparison-col-header {
+            color: var(--text-tertiary, #9ca3af);
+        }
+
+        .comparison-col:last-child .comparison-col-header {
             color: var(--gh-blue);
         }
+
+        .comparison-col-text {
+            font-size: 14px;
+            line-height: 1.55;
+            color: var(--text-secondary);
+        }
+
+        .comparison-col:last-child .comparison-col-text {
+            color: var(--text-primary);
+            font-weight: 500;
+        }
+
+        /* Legacy .comparison-table fallback (unused but kept for safety) */
+        .comparison-table { display: none; }
         
         /* Honesty Box */
         .honesty-box {
@@ -5464,15 +5477,6 @@ const TEMPLATE_HTML = `
             .broker-header {
                 flex-direction: column;
                 text-align: center;
-            }
-            
-            .comparison-table {
-                font-size: 13px;
-            }
-            
-            .comparison-table th,
-            .comparison-table td {
-                padding: 12px 8px;
             }
             
             .honesty-box {
@@ -5685,53 +5689,108 @@ const TEMPLATE_HTML = `
     <section class="alt">
         <div class="container-wide">
             <h2>Medicare.gov vs Calling Me</h2>
-            
-            <table class="comparison-table">
-                <thead>
-                    <tr>
-                        <th></th>
-                        <th>Medicare.gov Plan Finder</th>
-                        <th>Calling Me (828) 761-3326</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td>Coverage Info</td>
-                        <td>Shows "{{health_system}} in-network"</td>
-                        <td>I tell you if your specific {{health_system}} oncologist is covered</td>
-                    </tr>
-                    <tr>
-                        <td>Plan Selection</td>
-                        <td>Lists dozens of plans, doesn't explain differences</td>
-                        <td class="highlight">I narrow it to 2-3 plans based on your family history and health risks</td>
-                    </tr>
-                    <tr>
-                        <td>Network Knowledge</td>
-                        <td>Doesn't know {{hospitals[0]}} vs {{hospitals[1]}} can be on different contracts</td>
-                        <td>I know which plans cover which {{health_system}} facilities</td>
-                    </tr>
-                    <tr>
-                        <td>Family History</td>
-                        <td>Doesn't ask</td>
-                        <td class="highlight">I ask about cancer, heart disease, diabetes history — then architect coverage around future risk</td>
-                    </tr>
-                    <tr>
-                        <td>Provider Verification</td>
-                        <td>Can't verify if your {{health_system}} specialist accepts MAPD referrals</td>
-                        <td>I call {{health_system}} and verify before you enroll</td>
-                    </tr>
-                    <tr>
-                        <td>Risk Assessment</td>
-                        <td>None</td>
-                        <td class="highlight">I analyze family genetics, lifestyle, exercise habits — then find plans that cover what you MIGHT need, not just what you need today</td>
-                    </tr>
-                    <tr>
-                        <td>Ongoing Support</td>
-                        <td>You're on your own if something goes wrong</td>
-                        <td>I answer my phone when you call next year</td>
-                    </tr>
-                </tbody>
-            </table>
+
+            <div class="comparison-cards">
+
+                <div class="comparison-card">
+                    <div class="comparison-card-label">Coverage Info</div>
+                    <div class="comparison-card-body">
+                        <div class="comparison-col">
+                            <div class="comparison-col-header">Medicare.gov Plan Finder</div>
+                            <div class="comparison-col-text">Shows "{{health_system}} in-network" — that's it</div>
+                        </div>
+                        <div class="comparison-col">
+                            <div class="comparison-col-header">Calling Me · (828) 761-3326</div>
+                            <div class="comparison-col-text">I tell you if your specific {{health_system}} oncologist is covered</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="comparison-card">
+                    <div class="comparison-card-label">Plan Selection</div>
+                    <div class="comparison-card-body">
+                        <div class="comparison-col">
+                            <div class="comparison-col-header">Medicare.gov Plan Finder</div>
+                            <div class="comparison-col-text">Lists dozens of plans, doesn't explain differences</div>
+                        </div>
+                        <div class="comparison-col">
+                            <div class="comparison-col-header">Calling Me · (828) 761-3326</div>
+                            <div class="comparison-col-text">I narrow it to 2–3 plans based on your family history and health risks</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="comparison-card">
+                    <div class="comparison-card-label">Network Knowledge</div>
+                    <div class="comparison-card-body">
+                        <div class="comparison-col">
+                            <div class="comparison-col-header">Medicare.gov Plan Finder</div>
+                            <div class="comparison-col-text">Doesn't know {{hospitals[0]}} vs {{hospitals[1]}} can be on different contracts</div>
+                        </div>
+                        <div class="comparison-col">
+                            <div class="comparison-col-header">Calling Me · (828) 761-3326</div>
+                            <div class="comparison-col-text">I know which plans cover which {{health_system}} facilities</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="comparison-card">
+                    <div class="comparison-card-label">Family History</div>
+                    <div class="comparison-card-body">
+                        <div class="comparison-col">
+                            <div class="comparison-col-header">Medicare.gov Plan Finder</div>
+                            <div class="comparison-col-text">Doesn't ask</div>
+                        </div>
+                        <div class="comparison-col">
+                            <div class="comparison-col-header">Calling Me · (828) 761-3326</div>
+                            <div class="comparison-col-text">I ask about cancer, heart disease, diabetes history — then architect coverage around future risk</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="comparison-card">
+                    <div class="comparison-card-label">Provider Verification</div>
+                    <div class="comparison-card-body">
+                        <div class="comparison-col">
+                            <div class="comparison-col-header">Medicare.gov Plan Finder</div>
+                            <div class="comparison-col-text">Can't verify if your {{health_system}} specialist accepts MAPD referrals</div>
+                        </div>
+                        <div class="comparison-col">
+                            <div class="comparison-col-header">Calling Me · (828) 761-3326</div>
+                            <div class="comparison-col-text">I call {{health_system}} and verify before you enroll</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="comparison-card">
+                    <div class="comparison-card-label">Risk Assessment</div>
+                    <div class="comparison-card-body">
+                        <div class="comparison-col">
+                            <div class="comparison-col-header">Medicare.gov Plan Finder</div>
+                            <div class="comparison-col-text">None</div>
+                        </div>
+                        <div class="comparison-col">
+                            <div class="comparison-col-header">Calling Me · (828) 761-3326</div>
+                            <div class="comparison-col-text">I analyze family genetics, lifestyle, exercise habits — then find plans that cover what you MIGHT need, not just what you need today</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="comparison-card">
+                    <div class="comparison-card-label">Ongoing Support</div>
+                    <div class="comparison-card-body">
+                        <div class="comparison-col">
+                            <div class="comparison-col-header">Medicare.gov Plan Finder</div>
+                            <div class="comparison-col-text">You're on your own if something goes wrong</div>
+                        </div>
+                        <div class="comparison-col">
+                            <div class="comparison-col-header">Calling Me · (828) 761-3326</div>
+                            <div class="comparison-col-text">I answer my phone when you call next year</div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
         </div>
     </section>
     
