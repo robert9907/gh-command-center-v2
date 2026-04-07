@@ -1,3 +1,4 @@
+import { MASTER_TEMPLATE } from '@/lib/master-template';
 /**
  * pageBuilder.ts
  *
@@ -174,7 +175,10 @@ export function buildPageForQuery(
  */
 export function extractWordPressEmbed(standaloneHtml: string): string {
   // 1. Capture all <style>...</style> blocks
-  const styleBlocks: string[] = [];
+  // Extract master template CSS
+  const masterStyleMatch = MASTER_TEMPLATE.match(/<style[^>]*>([\s\S]*?)<\/style>/i);
+  const masterCSS = masterStyleMatch ? `<style>${masterStyleMatch[1]}</style>` : '';
+  const styleBlocks: string[] = masterCSS ? [masterCSS] : [];
   const styleRe = /<style\b[^>]*>[\s\S]*?<\/style>/gi;
   let m: RegExpExecArray | null;
   while ((m = styleRe.exec(standaloneHtml)) !== null) {
