@@ -26,6 +26,7 @@ import { X, Copy, Download, CheckCircle, AlertCircle, Loader2 } from 'lucide-rea
 import type { QueryCandidate } from '@/lib/seedExpansion';
 import { loadCounty, getCountyList, countyNameToSlug } from '@/lib/countyLoader';
 import { renderTemplate, type CountyData } from '@/lib/templateEngine';
+import { injectContextualLinks } from '@/lib/contextualLinker';
 import { validate } from '@/lib/validator';
 import { extractCounty } from '@/lib/intentClassifier';
 import { AEO_PAGE_TEMPLATE } from '@/lib/templates/aeoPage';
@@ -234,6 +235,7 @@ export default function PageGenerationModal({
     let html = '';
     try {
       html = renderTemplate(AEO_PAGE_TEMPLATE, data);
+      html = injectContextualLinks(html);
       setGeneratedHtml(html);
       setGenerateStep('done');
     } catch (err) {
