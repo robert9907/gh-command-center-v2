@@ -327,7 +327,7 @@ function QueueTab({ queue, setQueue, apiKeys }: QueueTabProps) {
 
   // ── mutations ──
   const handleRefresh = (id: string) => {
-    updateQuery(id, { pipelineStatus: 'not_built', lastBuilt: undefined });
+    setQueue(q => q.map(x => x.id === id ? { ...x, pipelineStatus: 'not_built', lastBuilt: undefined } : x));
   };
   const handleDelete = (id: string) => {
     setQueue((q) => q.filter((x) => x.id !== id));
