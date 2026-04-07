@@ -206,7 +206,6 @@ export function extractWordPressEmbed(standaloneHtml: string): string {
   const parts = [
     '<!-- Begin AEO 3.0 page (WordPress embed variant) -->',
     ...styleBlocks,
-    ...jsonLdBlocks,
     bodyContents.trim(),
     '<!-- End AEO 3.0 page -->',
   ];
