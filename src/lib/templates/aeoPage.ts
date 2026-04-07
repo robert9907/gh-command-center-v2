@@ -937,8 +937,8 @@ export const AEO_PAGE_TEMPLATE: string = `<!DOCTYPE html>
                 <thead>
                     <tr>
                         <th></th>
-                        <th>Medicare.gov Plan Finder</th>
                         <th>Calling Me (828) 761-3326</th>
+                        <th>Medicare.gov Plan Finder</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -1081,7 +1081,6 @@ export const AEO_PAGE_TEMPLATE: string = `<!DOCTYPE html>
                 <h3 style="font-size: 21px; font-weight: 600; color: var(--text-primary); margin-bottom: 24px; text-align: center;">Related Medicare Guides</h3>
                 <div style="display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; font-size: 15px;">
                     <a href="https://generationhealth.me/medicare-enrollment-in-north-carolina/" style="color: var(--gh-blue); text-decoration: none; padding: 8px 16px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); transition: all 0.2s;">Medicare Enrollment in NC</a>
-                    <a href="https://generationhealth.me/compare-medicare-plans-in-north-carolina/" style="color: var(--gh-blue); text-decoration: none; padding: 8px 16px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); transition: all 0.2s;">Compare Medicare Plans</a>
                     <a href="https://generationhealth.me/medigap-plans-in-north-carolina-plan-g-vs-plan-n/" style="color: var(--gh-blue); text-decoration: none; padding: 8px 16px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); transition: all 0.2s;">Medigap Plan G vs N</a>
                     <a href="https://generationhealth.me/medicare-cost-comparison-nc/" style="color: var(--gh-blue); text-decoration: none; padding: 8px 16px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); transition: all 0.2s;">Medicare Costs NC 2026</a>
                 </div>
@@ -1092,7 +1091,7 @@ export const AEO_PAGE_TEMPLATE: string = `<!DOCTYPE html>
                 <h3 style="font-size: 21px; font-weight: 600; color: var(--text-primary); margin-bottom: 24px; text-align: center;">Get Help in Nearby NC Counties</h3>
                 <div style="display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; font-size: 15px;">
                     {{#each neighboring_counties}}<a href="https://generationhealth.me/medicare-agents-in-{{this_slug}}-county-nc/" style="color: var(--gh-blue); text-decoration: none; padding: 8px 16px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm);">{{this}}</a>
-                    {{/each}}<a href="https://generationhealth.me/medicare-nc/" style="color: var(--gh-blue); text-decoration: none; padding: 8px 16px; background: var(--gh-blue); color: white; border: 1px solid var(--gh-blue); border-radius: var(--radius-sm); font-weight: 600;">All NC Counties →</a>
+                    {{/each}}
                 </div>
             </div>
             

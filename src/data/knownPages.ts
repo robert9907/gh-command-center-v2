@@ -17,7 +17,6 @@ export const KNOWN_PAGE_SLUGS: string[] = [
 
   // ── Medicare Guides (statewide) ──────────────────────────────
   'medicare-enrollment-in-north-carolina',
-  'compare-medicare-plans-in-north-carolina',
   'medigap-plans-in-north-carolina-plan-g-vs-plan-n',
   'medicare-cost-comparison-nc',
 
