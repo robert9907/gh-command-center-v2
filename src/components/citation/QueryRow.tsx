@@ -170,7 +170,7 @@ export default function QueryRow({
       onGeneratePage(query);
     } else if (e.key === 'Delete' || e.key === 'Backspace') {
       e.preventDefault();
-      onDelete(query.id);
+      onRefresh(query.id);
     }
   };
 
