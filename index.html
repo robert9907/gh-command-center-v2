@@ -4809,7 +4809,7 @@ const TEMPLATE_HTML = `
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Medicare Broker {{county}} NC: Which Plans Actually Cover Your {{health_system}} Doctors?</title>
-    <meta name="description" content="I check family history and health risks — then find the plan that covers what you might need next year, not just today. Rob Simm, NC Medicare broker serving {{county}} County.">
+    <meta name="description" content="I check family history and health risks &mdash; then find the plan that covers what you might need next year, not just today. Rob Simm, NC Medicare broker serving {{county}} County.">
     <link rel="canonical" href="https://generationhealth.me/medicare-broker-{{county_slug}}-nc/">
     <script type="application/ld+json">
     {
@@ -4944,9 +4944,9 @@ const TEMPLATE_HTML = `
         </nav>
     </header>
     <section class="hero">
-        <div class="hero-eyebrow">Medicare Broker · {{county}} NC</div>
+        <div class="hero-eyebrow">Medicare Broker &middot; {{county}} NC</div>
         <h1 class="hero-h1">Which plans actually cover your {{health_system}} doctors?</h1>
-        <p class="hero-sub">I check family history and health risks — then find the plan that covers what you might need next year, not just today.</p>
+        <p class="hero-sub">I check family history and health risks &mdash; then find the plan that covers what you might need next year, not just today.</p>
         <a href="tel:8287613326" class="split-pill">
             <div class="pill-left">
                 <div class="pill-left-q">{{health_system}} covered?</div>
@@ -4959,8 +4959,8 @@ const TEMPLATE_HTML = `
         </a>
     </section>
     <div class="trust">
-        <div class="trust-item"><div class="trust-dot"></div>Licensed · NC #10447418</div>
-        <div class="trust-item"><div class="trust-dot"></div>Independent · All Carriers</div>
+        <div class="trust-item"><div class="trust-dot"></div>Licensed &middot; NC #10447418</div>
+        <div class="trust-item"><div class="trust-dot"></div>Independent &middot; All Carriers</div>
         <div class="trust-item"><div class="trust-dot"></div>No SSN Required</div>
         <div class="trust-item"><div class="trust-dot"></div>$0 Cost to Compare</div>
         <div class="trust-item"><div class="trust-dot"></div>500+ NC Families Helped</div>
@@ -4969,7 +4969,7 @@ const TEMPLATE_HTML = `
         <div class="section">
             <div class="section-label">What you\'re really asking</div>
             <h2 class="section-h2">You\'re not confused about Medicare. You have questions nobody\'s answering.</h2>
-            <p class="section-body">The questions people call me about — before they realize Medicare.gov can\'t answer them.</p>
+            <p class="section-body">The questions people call me about &mdash; before they realize Medicare.gov can\'t answer them.</p>
             <div class="fear-grid">
                 <div class="fear-item">
                     <div class="fear-num">01</div>
@@ -4999,7 +4999,7 @@ const TEMPLATE_HTML = `
             <div class="comparison-label">The difference</div>
             <h2 class="comparison-h2">Medicare.gov vs Working With Rob</h2>
             <div class="comparison-row">
-                <div class="comp-col-l"><div class="comp-topic">Coverage Info</div><div class="comp-text">Shows "{{health_system}} in-network" — that\'s it</div></div>
+                <div class="comp-col-l"><div class="comp-topic">Coverage Info</div><div class="comp-text">Shows "{{health_system}} in-network" &mdash; that\'s it</div></div>
                 <div class="comp-col-r"><div class="comp-topic">Coverage Info</div><div class="comp-text">I tell you if your specific {{health_system}} oncologist is covered</div></div>
             </div>
             <div class="comparison-row">
@@ -5008,7 +5008,7 @@ const TEMPLATE_HTML = `
             </div>
             <div class="comparison-row">
                 <div class="comp-col-l"><div class="comp-topic">Family History</div><div class="comp-text">Doesn\'t ask</div></div>
-                <div class="comp-col-r"><div class="comp-topic">Family History</div><div class="comp-text">I ask about cancer, heart disease, diabetes — then architect coverage around future risk</div></div>
+                <div class="comp-col-r"><div class="comp-topic">Family History</div><div class="comp-text">I ask about cancer, heart disease, diabetes &mdash; then architect coverage around future risk</div></div>
             </div>
             <div class="comparison-row">
                 <div class="comp-col-l"><div class="comp-topic">Provider Verification</div><div class="comp-text">Can\'t verify if your {{health_system}} specialist accepts MAPD referrals</div></div>
@@ -5022,7 +5022,7 @@ const TEMPLATE_HTML = `
     </div>
     <section>
         <div class="scenario-wrap">
-            <div class="section-label">Real scenario · 2025</div>
+            <div class="section-label">Real scenario &middot; 2025</div>
             <h2 class="section-h2">The difference between right and wrong was $35,500.</h2>
             <p class="section-body">Client A picked Humana Gold Plus. $0 premium. Sounded good. Then came the breast cancer diagnosis.</p>
             <div class="scenario-numbers">
@@ -5034,7 +5034,7 @@ const TEMPLATE_HTML = `
                 <div class="scenario-good">
                     <div class="scenario-tag">Right plan</div>
                     <div class="scenario-amount">$2,500</div>
-                    <div class="scenario-desc">Switched to Aetna Medicare Eagle during a Special Enrollment Period. Cancer diagnosis qualifies. {{specialties[0]}} — in-network.</div>
+                    <div class="scenario-desc">Switched to Aetna Medicare Eagle during a Special Enrollment Period. Cancer diagnosis qualifies. {{specialties[0]}} &mdash; in-network.</div>
                 </div>
             </div>
         </div>
@@ -5065,20 +5065,20 @@ const TEMPLATE_HTML = `
         <div class="counties-wrap">
             <h3 class="counties-h3">Get Help in Nearby NC Counties</h3>
             <div class="counties-grid">
-                {{#each neighboring_counties}}{{this}}{{/each}}<a href="https://generationhealth.me/" class="county-link county-all">All NC Counties →</a>
+                {{#each neighboring_counties}}{{this}}{{/each}}<a href="https://generationhealth.me/" class="county-link county-all">All NC Counties &rarr;</a>
             </div>
         </div>
         <div class="creds-wrap">
             <div class="creds-name">Robert Simm, Licensed Medicare Broker</div>
-            <div class="creds-line">NC License #10447418 · NPN #10447418 · AHIP Certified</div>
-            <div class="creds-line">12+ Years Experience · 500+ NC Families Helped · 2731 Meridian Pkwy, Durham NC 27713</div>
-            <div class="creds-line">&#9733;&#9733;&#9733;&#9733;&#9733; 5.0 Rating · 20+ Google Reviews · <a href="https://www.ncdoi.gov/consumers/verify-license" class="creds-verify">Verify License →</a></div>
+            <div class="creds-line">NC License #10447418 &middot; NPN #10447418 &middot; AHIP Certified</div>
+            <div class="creds-line">12+ Years Experience &middot; 500+ NC Families Helped &middot; 2731 Meridian Pkwy, Durham NC 27713</div>
+            <div class="creds-line">&#9733;&#9733;&#9733;&#9733;&#9733; 5.0 Rating &middot; 20+ Google Reviews &middot; <a href="https://www.ncdoi.gov/consumers/verify-license" class="creds-verify">Verify License &rarr;</a></div>
             <div class="creds-updated"><strong>Last Updated:</strong> ${new Date().toLocaleDateString(\'en-US\', {month:\'long\', day:\'numeric\', year:\'numeric\'})} | <strong>Reviewed By:</strong> Robert Simm, Licensed Medicare Broker, NC #10447418 | <strong>Next Review:</strong> October 2026</div>
         </div>
     </section>
     <div class="final-wrap">
         <h2 class="final-h2">10 minutes. You\'ll know exactly where you stand.</h2>
-        <p class="final-sub">Rob Simm · Licensed NC Medicare Broker · NPN #10447418</p>
+        <p class="final-sub">Rob Simm &middot; Licensed NC Medicare Broker &middot; NPN #10447418</p>
         <a href="tel:8287613326" class="split-pill">
             <div class="pill-left">
                 <div class="pill-left-q">{{health_system}} covered?</div>
@@ -5089,7 +5089,7 @@ const TEMPLATE_HTML = `
                 <div class="pill-right-num">(828) 761-3326</div>
             </div>
         </a>
-        <p class="no-pressure">No pressure · No sales pitch · Your data never sold</p>
+        <p class="no-pressure">No pressure &middot; No sales pitch &middot; Your data never sold</p>
     </div>
 </body>
 </html>
