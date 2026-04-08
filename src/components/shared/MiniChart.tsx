@@ -27,7 +27,7 @@ export default function MiniChart({ data, color = '#4ADE80', height = 48 }: Mini
             color: '#E8ECF0',
           }}
           labelStyle={{ display: 'none' }}
-          formatter={(value: number) => [value, '']}
+          formatter={(value: unknown) => [value, '']}
         />
         <Area
           type="monotone"
