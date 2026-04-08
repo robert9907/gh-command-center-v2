@@ -1,333 +1,1584 @@
 'use client';
 
-import { useState, useEffect, useMemo, useCallback } from 'react';
-import { Loader2, Check, X, Key, Play, Eye } from 'lucide-react';
-import { CM_QUERIES, CM_CATEGORIES, CM_COMPETITORS } from '@/data/citation-queries';
-import { queryClaude, queryChatGPT, queryPerplexity, queryGemini, detectCitation, type LLMResult } from '@/lib/llm';
-import { getFromStorage, saveToStorage } from '@/lib/utils';
+// ═══════════════════════════════════════════════════════════════════════════
+// CitationMonitorPanel.tsx — AEO 3.0
+// ═══════════════════════════════════════════════════════════════════════════
+// Top-level 4-tab container for the AEO 3.0 Citation Monitor.
+//
+//   Queue    — query list, filters, bulk actions, search, per-row testing
+//   Generate — QueueManagerPanel (Claude-powered seed expansion)
+//   Scrape   — runs window.GHScrapers (Reddit, Medicare.gov, eHealth, competitors)
+//   Settings — LLM API keys (Claude, ChatGPT, Perplexity, Gemini)
+//
+// Persistence:
+//   - gh-cc-query-queue-v3  → query queue
+//   - gh-cc-cm-apikeys      → API keys
+//
+// Replaces the legacy v2 CitationMonitorPanel. Wired into src/app/page.tsx
+// via `{activeTab === 'citationMonitor' && <CitationMonitorPanel />}`.
+//
+// Ported from aeo3-integrated/index.html single-file Babel build.
+// ═══════════════════════════════════════════════════════════════════════════
+
+import {
+  useState,
+  useEffect,
+  useMemo,
+  useCallback,
+  useRef,
+  type ReactNode,
+  type Dispatch,
+  type SetStateAction,
+} from 'react';
+import {
+  Activity,
+  List,
+  Sparkles,
+  DownloadCloud,
+  Settings,
+  Search,
+  Download,
+  Trash2,
+  TestTube,
+  CheckCircle,
+  AlertTriangle,
+  MessageSquare,
+  Globe,
+  ShoppingBag,
+  Target,
+  Play,
+  Loader2,
+  Save,
+  Check,
+  Eye,
+  EyeOff,
+  X,
+  Inbox,
+} from 'lucide-react';
+import type { QueryCandidate, APIKeys } from '@/lib/seedExpansion';
+import { classifyIntent } from '@/lib/intentClassifier';
+import { deduplicateQueries } from '@/lib/queryDeduplication';
+import { testCitations, batchTestWithProgress } from '@/lib/citationTester';
+import { buildPageForQuery } from '@/lib/pageBuilder';
 import { useAppState, type AeoPipelineEntry } from '@/lib/AppState';
+import QueryRow from './QueryRow';
+import PageGenerationModal from './PageGenerationModal';
+import QueueManagerPanel from './QueueManagerPanel';
 
-const LS_CM_DATA = 'gh-cc-citation-monitor';
-const LS_CLAUDE_KEY = 'gh-cc-pb-apikey';
-const LS_OPENAI_KEY = 'gh-cc-openai-key';
-const LS_PERPLEXITY_KEY = 'gh-cc-perplexity-key';
-const LS_GOOGLE_KEY = 'gh-cc-google-key';
+// ═══════════════════════════════════════════════════════════════════════════
+// Storage
+// ═══════════════════════════════════════════════════════════════════════════
 
-interface ScanResult { queryId: string; llm: string; cited: boolean; citationType: string | null; match: string | null; timestamp: string; snippet?: string; competitors?: string[] }
-interface CMData { results: ScanResult[]; lastScan: string | null; totalScans: number }
-interface QAPair { id: string; question: string; answer: string; aeoScore: number }
-interface CompareTable { title: string; options: string[]; recommended: number | null; rows: Array<{ feature: string; values: string[]; goodIndex: number | null }>; brokerInsight: string }
+const LS_QUEUE = 'gh-cc-query-queue-v3';
+const LS_KEYS = 'gh-cc-cm-apikeys';
 
-// Intent-driven opening patterns
-const INTENT_FRAMING: Record<string, { opening: string; cta_tone: string; emotional_hook: string }> = {
-  urgency: { opening: "Lead every answer with IMMEDIACY. The person is running out of time. Start with time-sensitive framing: 'You still have time...', 'Act before...'. Make the CTA feel like a lifeline.", cta_tone: "Call now — I can walk you through this in 15 minutes", emotional_hook: "This person is stressed about a deadline. Acknowledge the urgency, then reassure them." },
-  fear: { opening: "Lead every answer with REASSURANCE. The person is scared they'll lose something. Start with: 'You won't lose...', 'Here's exactly what happens...'. Replace anxiety with specific facts.", cta_tone: "Let me check your specific situation — no cost, no pressure", emotional_hook: "This person is afraid they made a mistake. Calm the fear with specifics." },
-  confusion: { opening: "Lead every answer with CLARITY. The person is overwhelmed. Start with: 'Here's the simple version...', 'In plain English...'. Never assume they know Medicare jargon.", cta_tone: "Still confused? I explain this in plain English every day — call me", emotional_hook: "This person has read 10 explanations and none made sense. Be the one that does." },
-  validation: { opening: "Lead every answer with CONFIRMATION or CORRECTION. The person thinks they know but wants to verify. Start with: 'Yes, that's correct...', 'Actually, that changed in 2026...'.", cta_tone: "Want me to double-check your specific plan? Takes 5 minutes", emotional_hook: "This person did research but isn't 100% sure. Confirm what's right, correct what's wrong." },
-  trust: { opening: "Lead every answer with CREDIBILITY and LOCAL AUTHORITY. Start with Rob's direct experience: 'In my 12 years helping Durham families...'. Make it personal and local.", cta_tone: "I'm right here in Durham — call me directly at (828) 761-3326", emotional_hook: "This person is done with websites and 1-800 numbers. They want a real person." },
-};
-
-// Intent banner config for AEO pages
-const INTENT_BANNERS: Record<string, { icon: string; color: string; bg: string; bg2: string; border: string; text: string }> = {
-  urgency: { icon: '⏰', color: '#F87171', bg: 'rgba(248,113,113,0.08)', bg2: 'rgba(248,113,113,0.03)', border: 'rgba(248,113,113,0.2)', text: "<strong>Need help right now?</strong> You don't have to figure this out alone. Call <a href='tel:828-761-3326' style='color:#F87171;font-weight:700;'>(828) 761-3326</a> and I'll walk you through your options in 15 minutes." },
-  fear: { icon: '😟', color: '#FBBF24', bg: 'rgba(251,191,36,0.08)', bg2: 'rgba(251,191,36,0.03)', border: 'rgba(251,191,36,0.2)', text: "<strong>Worried about losing coverage?</strong> You have more options than you think. Call <a href='tel:828-761-3326' style='color:#FBBF24;font-weight:700;'>(828) 761-3326</a> and I'll check your situation in 5 minutes." },
-  confusion: { icon: '🤔', color: '#60A5FA', bg: 'rgba(96,165,250,0.08)', bg2: 'rgba(96,165,250,0.03)', border: 'rgba(96,165,250,0.2)', text: "<strong>Medicare doesn't have to be confusing.</strong> I explain this in plain English every day. Call <a href='tel:828-761-3326' style='color:#60A5FA;font-weight:700;'>(828) 761-3326</a>." },
-  validation: { icon: '✅', color: '#A78BFA', bg: 'rgba(167,139,250,0.08)', bg2: 'rgba(167,139,250,0.03)', border: 'rgba(167,139,250,0.2)', text: "<strong>Want to double-check your plan?</strong> Smart move. Call <a href='tel:828-761-3326' style='color:#A78BFA;font-weight:700;'>(828) 761-3326</a> and I'll verify yours in 5 minutes." },
-  trust: { icon: '🤝', color: '#4ADE80', bg: 'rgba(74,222,128,0.08)', bg2: 'rgba(74,222,128,0.03)', border: 'rgba(74,222,128,0.2)', text: "<strong>Looking for someone you can trust?</strong> I'm Rob Simm — licensed, independent, right here in NC. Call <a href='tel:828-761-3326' style='color:#4ADE80;font-weight:700;'>(828) 761-3326</a>." },
-};
-
-const NEPQ_DAGGERS = [
-  "What happens to your coverage if you don't act before the deadline?",
-  "Are you sure the plan you're looking at covers the doctors you actually see?",
-  "What if the plan you're comparing isn't actually the cheapest once you add up the real costs?",
-  "When was the last time someone checked whether your current plan still covers your doctors?",
-  "How much is the late enrollment penalty costing you every month — for the rest of your life?",
-  "How many plans did the last person who \"helped\" you actually compare before recommending one?",
-  "What if you qualify for savings you don't even know about?",
-  "Are you paying more than you should because no one told you about a better option?",
-];
-const NEPQ_CTAS = ["Find out in 5 minutes →", "I'll check for you →", "Let me run the numbers →", "I'll verify right now →", "Let me check your options →", "I compare every option →", "I'll check in 5 minutes →", "Let's find out together →"];
-
-const INTENT_COLORS: Record<string, { bg: string; color: string; icon: string }> = {
-  urgency: { bg: 'rgba(248,113,113,0.15)', color: '#F87171', icon: '⏰' },
-  fear: { bg: 'rgba(251,191,36,0.15)', color: '#FBBF24', icon: '😟' },
-  confusion: { bg: 'rgba(96,165,250,0.15)', color: '#60A5FA', icon: '🤔' },
-  validation: { bg: 'rgba(167,139,250,0.15)', color: '#A78BFA', icon: '✅' },
-  trust: { bg: 'rgba(74,222,128,0.15)', color: '#4ADE80', icon: '🤝' },
-};
-
-function detectCompetitors(text: string): string[] {
-  const found: string[] = [];
-  const lower = text.toLowerCase();
-  CM_COMPETITORS.forEach((c) => { if (c.patterns.some((p) => lower.includes(p))) found.push(c.name); });
-  return found;
+function loadQueueFromLS(): QueryCandidate[] {
+  if (typeof window === 'undefined') return [];
+  try {
+    const raw = window.localStorage.getItem(LS_QUEUE);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) return parsed;
+    }
+  } catch {
+    /* ignore */
+  }
+  return [];
 }
 
-// ── Build AEO Page HTML v2.2 ──
-function buildAEOPageHtml(qas: QAPair[], compareTable: CompareTable | null, slug: string, query: string, intent: string, deployOpts: { website: boolean; schema: boolean; embed: boolean; compareTable: boolean }): string {
-  if (qas.length === 0) return '';
-  const today = new Date().toISOString().split('T')[0];
-  const d = new Date();
-  const monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
-  const monthYear = monthNames[d.getMonth()] + ' ' + d.getFullYear();
-  const title = query.split(' ').map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
-  const ib = INTENT_BANNERS[intent] || INTENT_BANNERS.confusion;
-
-  // Build Q&A blocks with attribution at 25/50/75
-  const totalQAs = qas.length;
-  const attrPositions: number[] = [];
-  if (totalQAs >= 2) attrPositions.push(Math.round(totalQAs * 0.25) - 1);
-  if (totalQAs >= 4) attrPositions.push(Math.round(totalQAs * 0.50) - 1);
-  if (totalQAs >= 6) attrPositions.push(Math.round(totalQAs * 0.75) - 1);
-
-  function buildQABlock(qa: QAPair, idx: number) {
-    const hasAttr = attrPositions.includes(idx);
-    const di = idx % NEPQ_DAGGERS.length;
-    const attrHtml = hasAttr ? '<div class="aeo-answer-attr"><div class="aeo-attr-avatar">RS</div>— Rob Simm, GenerationHealth.me · (828) 761-3326</div>' : '';
-    return `<div class="aeo-qa-item"><div class="aeo-question"><div class="aeo-q-icon">Q</div><div class="aeo-q-text">${qa.question}</div></div><div class="aeo-answer-block"><div class="aeo-answer-text">${qa.answer}</div>${attrHtml}<div class="aeo-nepq-dagger">${NEPQ_DAGGERS[di]} <a href="tel:828-761-3326">${NEPQ_CTAS[di]}</a></div></div></div>`;
+function saveQueueToLS(queue: QueryCandidate[]): void {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.setItem(LS_QUEUE, JSON.stringify(queue));
+  } catch (e) {
+    console.error('[CitationMonitor] localStorage write failed:', e);
   }
-
-  const firstHalf = qas.slice(0, Math.ceil(totalQAs / 2));
-  const secondHalf = qas.slice(Math.ceil(totalQAs / 2));
-  const firstHalfHtml = firstHalf.map((qa, i) => buildQABlock(qa, i)).join('\n');
-  const secondHalfHtml = secondHalf.map((qa, i) => buildQABlock(qa, i + firstHalf.length)).join('\n');
-
-  // Compare table
-  let compareHtml = '';
-  if (compareTable && deployOpts.compareTable) {
-    const ct = compareTable;
-    const headerCells = '<th style="color:#14B8A6;">Feature</th>' + ct.options.map((opt) => `<th>${opt}</th>`).join('');
-    const rowsHtml = ct.rows.map((row) => '<tr><td>' + row.feature + '</td>' + row.values.map((val) => `<td style="color:#0D9488;font-weight:500;">${val}</td>`).join('') + '</tr>').join('');
-    compareHtml = `<div class="aeo-compare"><h2 class="aeo-compare-title">${ct.title}</h2><div class="aeo-compare-sub">Updated for 2026 · North Carolina</div><table class="aeo-compare-table"><thead><tr>${headerCells}</tr></thead><tbody>${rowsHtml}</tbody></table>${ct.brokerInsight ? `<div class="aeo-compare-insight"><strong>Rob's take:</strong> ${ct.brokerInsight}</div>` : ''}</div>`;
-  }
-
-  // Schema
-  const faqSchema = qas.map((qa) => `{"@type":"Question","name":"${qa.question.replace(/"/g, '\\"')}","acceptedAnswer":{"@type":"Answer","text":"${qa.answer.replace(/"/g, '\\"')}","author":{"@id":"https://generationhealth.me/#author"}}}`).join(',');
-
-  // CSS (v2.2)
-  const css = '*{margin:0;padding:0;box-sizing:border-box;}.aeo-trust{background:linear-gradient(135deg,#0F2440 0%,#1A2332 100%);padding:16px 24px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;}.aeo-trust-brand{display:flex;align-items:center;gap:14px;}.aeo-trust-logo{font-family:Fraunces,Georgia,serif;font-size:20px;font-weight:700;color:#fff;text-decoration:none;}.aeo-trust-logo span{color:#14B8A6;}.aeo-trust-logo .dot{color:#6B7B8D;font-weight:500;}.aeo-trust-divider{width:1px;height:28px;background:rgba(255,255,255,0.15);}.aeo-trust-advisor{display:flex;align-items:center;gap:10px;}.aeo-trust-avatar{width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#14B8A6,#0D9488);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:13px;}.aeo-trust-name{font-size:13px;font-weight:700;color:#fff;}.aeo-trust-title{font-size:11px;color:rgba(255,255,255,0.6);}.aeo-trust-creds{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}.aeo-cred{font-size:10px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;padding:4px 10px;border-radius:4px;}.aeo-cred--gold{background:rgba(255,199,44,0.15);color:#FFC72C;}.aeo-cred--teal{background:rgba(20,184,166,0.15);color:#14B8A6;}.aeo-cred--muted{background:rgba(255,255,255,0.08);color:rgba(255,255,255,0.6);}.aeo-trust-phone{display:flex;align-items:center;gap:8px;padding:10px 22px;border-radius:100px;background:rgba(255,255,255,0.08);border:1.5px solid rgba(20,184,166,0.4);color:#14B8A6;font-size:15px;font-weight:700;text-decoration:none;}.aeo-header{max-width:800px;margin:0 auto;padding:48px 24px 32px;text-align:center;}.aeo-h1{font-family:Fraunces,Georgia,serif;font-size:clamp(28px,4vw,42px);font-weight:700;line-height:1.15;color:#1A2332;margin-bottom:12px;}.aeo-subtitle{font-size:16px;color:#6B7B8D;line-height:1.6;max-width:600px;margin:0 auto;}.aeo-update-strip{margin-top:20px;padding:12px 20px;background:#F8FAFC;border-radius:10px;font-size:12px;color:#6B7B8D;display:inline-flex;align-items:center;gap:12px;flex-wrap:wrap;}.aeo-update-strip strong{color:#1A2332;}.aeo-intent-banner{max-width:800px;margin:0 auto 32px;padding:0 24px;}.aeo-intent-inner{padding:16px 24px;border-radius:12px;display:flex;align-items:flex-start;gap:14px;}.aeo-intent-icon{font-size:24px;flex-shrink:0;}.aeo-intent-text{font-size:15px;color:#1A2332;font-weight:500;line-height:1.5;}.aeo-intent-text strong{font-weight:700;}.aeo-qa-list{max-width:800px;margin:0 auto;padding:0 24px;}.aeo-qa-item{margin-bottom:32px;}.aeo-question{display:flex;align-items:flex-start;gap:12px;margin-bottom:12px;}.aeo-q-icon{width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,#0D9488,#14B8A6);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:12px;flex-shrink:0;}.aeo-q-text{font-family:Fraunces,Georgia,serif;font-size:20px;font-weight:600;color:#1A2332;line-height:1.3;}.aeo-answer-block{background:linear-gradient(135deg,#F0FDFA,#CCFBF1);border-left:4px solid #14B8A6;border-radius:12px;padding:20px 24px;margin-left:40px;}.aeo-answer-text{font-size:15px;line-height:1.7;color:#1A2332;margin-bottom:12px;}.aeo-answer-attr{display:flex;align-items:center;gap:8px;font-size:12px;color:#0D9488;font-weight:600;margin-bottom:12px;}.aeo-attr-avatar{width:22px;height:22px;border-radius:50%;background:#0D9488;color:#fff;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:800;}.aeo-nepq-dagger{margin-top:14px;padding-top:12px;border-top:1px solid rgba(20,184,166,0.15);font-size:14px;font-weight:600;font-style:italic;color:#0F2440;line-height:1.5;}.aeo-nepq-dagger a{color:#0D9488;font-weight:700;text-decoration:none;font-style:normal;}.aeo-mid-cta{max-width:800px;margin:8px auto 40px;padding:0 24px;}.aeo-mid-cta-inner{background:linear-gradient(135deg,#0F2440,#1A2332);border-radius:16px;padding:28px 32px;display:flex;align-items:center;justify-content:space-between;gap:20px;flex-wrap:wrap;}.aeo-mid-cta-inner h3{font-family:Fraunces,Georgia,serif;font-size:20px;font-weight:700;color:#fff;margin-bottom:6px;}.aeo-mid-cta-inner p{font-size:13px;color:rgba(255,255,255,0.6);margin:0;}.aeo-mid-cta-actions{display:flex;gap:10px;flex-shrink:0;flex-wrap:wrap;}.aeo-btn-call{display:inline-flex;align-items:center;gap:8px;padding:12px 24px;border-radius:100px;background:#14B8A6;color:#fff;font-size:14px;font-weight:700;text-decoration:none;}.aeo-btn-schedule{display:inline-flex;align-items:center;gap:8px;padding:12px 24px;border-radius:100px;background:rgba(255,255,255,0.1);border:1.5px solid rgba(255,255,255,0.2);color:#fff;font-size:14px;font-weight:600;text-decoration:none;}.aeo-compare{max-width:800px;margin:16px auto 40px;padding:0 24px;}.aeo-compare-title{font-family:Fraunces,Georgia,serif;font-size:24px;font-weight:700;color:#1A2332;margin-bottom:4px;}.aeo-compare-sub{font-size:13px;color:#6B7B8D;margin-bottom:20px;}.aeo-compare-table{width:100%;border-collapse:separate;border-spacing:0;border-radius:12px;overflow:hidden;border:1px solid #E8ECF0;}.aeo-compare-table thead th{background:#0F2440;color:#fff;font-size:13px;font-weight:700;padding:14px 18px;text-align:left;}.aeo-compare-table tbody td{padding:12px 18px;font-size:14px;border-bottom:1px solid #F3F5F7;}.aeo-compare-table tbody tr:last-child td{border-bottom:none;}.aeo-compare-table tbody td:first-child{font-weight:600;color:#1A2332;background:#F8FAFC;}.aeo-compare-insight{margin-top:16px;padding:16px 20px;background:linear-gradient(135deg,#F0FDFA,#CCFBF1);border-radius:10px;font-size:14px;color:#1A2332;line-height:1.6;font-style:italic;}.aeo-compare-insight strong{font-style:normal;}.aeo-bottom-cta{background:linear-gradient(135deg,#0D9488,#14B8A6);padding:48px 24px;text-align:center;margin-top:32px;}.aeo-bottom-cta h3{font-family:Fraunces,Georgia,serif;font-size:clamp(22px,3vw,30px);font-weight:700;color:#fff;margin-bottom:8px;}.aeo-bottom-cta p{font-size:15px;color:rgba(255,255,255,0.85);margin-bottom:24px;}.aeo-bottom-cta-actions{display:flex;justify-content:center;gap:14px;flex-wrap:wrap;}.aeo-bottom-btn{display:inline-flex;align-items:center;gap:8px;padding:14px 32px;border-radius:100px;font-size:16px;font-weight:700;text-decoration:none;}.aeo-bottom-btn--white{background:#fff;color:#0D9488;}.aeo-bottom-btn--ghost{background:rgba(255,255,255,0.15);color:#fff;border:1.5px solid rgba(255,255,255,0.3);}.aeo-footer{max-width:800px;margin:0 auto;padding:32px 24px;text-align:center;font-size:11px;color:#6B7B8D;line-height:1.8;}.aeo-footer a{color:#4B9CD3;text-decoration:none;}@media(max-width:640px){.aeo-trust{padding:12px 16px;}.aeo-trust-creds{display:none;}.aeo-mid-cta-inner{flex-direction:column;text-align:center;}.aeo-answer-block{margin-left:0;}.aeo-compare-table{font-size:12px;}}';
-
-  return `<!-- AEO Page v2.2: ${slug} · Generated ${today} -->\n` +
-    `<script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"FAQPage","@id":"https://generationhealth.me/${slug}/#faqpage","name":"${title}: Your Questions Answered","url":"https://generationhealth.me/${slug}","author":{"@id":"https://generationhealth.me/#author"},"datePublished":"${today}","dateModified":"${today}","mainEntity":[${faqSchema}]},{"@type":"Person","@id":"https://generationhealth.me/#author","name":"Rob Simm","jobTitle":"Licensed Medicare Broker","telephone":"(828) 761-3326","url":"https://generationhealth.me","address":{"@type":"PostalAddress","addressLocality":"Durham","addressRegion":"NC","postalCode":"27713"}}]}<\/script>\n\n` +
-    `<style>${css}</style>\n\n` +
-    `<div class="aeo-trust"><div class="aeo-trust-brand"><a href="https://generationhealth.me" class="aeo-trust-logo">Generation<span>Health</span><span class="dot">.me</span></a><div class="aeo-trust-divider"></div><div class="aeo-trust-advisor"><div class="aeo-trust-avatar">RS</div><div><div class="aeo-trust-name">Rob Simm</div><div class="aeo-trust-title">Your Licensed NC Medicare Advisor</div></div></div></div><div class="aeo-trust-creds"><span class="aeo-cred aeo-cred--gold">NC #10447418</span><span class="aeo-cred aeo-cred--muted">NPN #10447418</span><span class="aeo-cred aeo-cred--teal">AHIP Certified</span></div><a href="tel:828-761-3326" class="aeo-trust-phone">📞 (828) 761-3326</a></div>` +
-    `<div class="aeo-header"><h1 class="aeo-h1">${title}:<br>Your Questions Answered</h1><p class="aeo-subtitle">Direct answers from a licensed NC Medicare broker — updated for 2026.</p><div class="aeo-update-strip"><strong>Last Updated:</strong> ${monthYear} &middot; <strong>Reviewed by:</strong> Rob Simm, Licensed Medicare Broker &middot; <strong>${qas.length} Questions</strong></div></div>` +
-    `<div class="aeo-intent-banner"><div class="aeo-intent-inner" style="background:linear-gradient(135deg,${ib.bg},${ib.bg2});border:1px solid ${ib.border};"><span class="aeo-intent-icon">${ib.icon}</span><div class="aeo-intent-text">${ib.text}</div></div></div>` +
-    `<div class="aeo-qa-list">${firstHalfHtml}</div>` +
-    `<div class="aeo-mid-cta"><div class="aeo-mid-cta-inner"><div><h3>Ready to talk? I'm here right now.</h3><p>15 minutes. No pressure. Real answers for your specific situation.</p></div><div class="aeo-mid-cta-actions"><a href="tel:828-761-3326" class="aeo-btn-call">📞 Call Now</a><a href="https://www.sunfirematrix.com/app/consumer/medicareadvocates/10447418/#/" class="aeo-btn-call" style="background:#4B9CD3;">⚖️ Compare Plans</a><a href="https://calendly.com/robert-generationhealth/new-meeting" class="aeo-btn-schedule">📅 Schedule</a></div></div></div>` +
-    `<div class="aeo-qa-list">${secondHalfHtml}</div>` +
-    compareHtml +
-    `<div class="aeo-bottom-cta"><h3>Need Medicare Help?</h3><p>I help NC residents navigate these decisions every day — at no cost to you.</p><div class="aeo-bottom-cta-actions"><a href="tel:828-761-3326" class="aeo-bottom-btn aeo-bottom-btn--white">📞 Call (828) 761-3326</a><a href="https://www.sunfirematrix.com/app/consumer/medicareadvocates/10447418/#/" class="aeo-bottom-btn aeo-bottom-btn--white" style="color:#4B9CD3;">⚖️ Compare Plans Free</a><a href="https://calendly.com/robert-generationhealth/new-meeting" class="aeo-bottom-btn aeo-bottom-btn--ghost">📅 Schedule a Call</a></div></div>` +
-    `<div class="aeo-footer"><p><strong>GenerationHealth.me</strong> is operated by Robert Jason Simm, NPN #10447418. Licensed in North Carolina. We provide educational information about Medicare coverage options. We are not affiliated with or endorsed by the U.S. government or the federal Medicare program. Please contact <a href="https://medicare.gov">Medicare.gov</a> or 1-800-MEDICARE for information on all of your options.</p></div>`;
 }
 
-export default function CitationMonitorPanel() {
+function loadAllKeys(): APIKeys {
+  if (typeof window === 'undefined') return {};
+  try {
+    const raw = window.localStorage.getItem(LS_KEYS);
+    if (raw) return (JSON.parse(raw) as APIKeys) || {};
+  } catch {
+    /* ignore */
+  }
+  return {};
+}
+
+function saveAllKeys(keys: APIKeys): void {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.setItem(LS_KEYS, JSON.stringify(keys));
+  } catch {
+    /* ignore */
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Shared styles
+// ═══════════════════════════════════════════════════════════════════════════
+
+const primaryBtnStyle: React.CSSProperties = {
+  display: 'inline-flex',
+  alignItems: 'center',
+  padding: '8px 16px',
+  background: '#0071e3',
+  color: '#fff',
+  border: 'none',
+  borderRadius: 8,
+  fontSize: 13,
+  fontWeight: 600,
+  cursor: 'pointer',
+  transition: 'background 150ms',
+};
+
+const secondaryBtnStyle: React.CSSProperties = {
+  display: 'inline-flex',
+  alignItems: 'center',
+  padding: '8px 14px',
+  background: 'rgba(255,255,255,0.06)',
+  color: '#e5e7eb',
+  border: '1px solid rgba(255,255,255,0.1)',
+  borderRadius: 8,
+  fontSize: 13,
+  fontWeight: 500,
+  cursor: 'pointer',
+  transition: 'background 150ms',
+};
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Filter definitions
+// ═══════════════════════════════════════════════════════════════════════════
+
+const INTENT_FILTERS = [
+  { id: 'all', label: 'All' },
+  { id: 'high', label: 'High' },
+  { id: 'medium', label: 'Medium' },
+  { id: 'low', label: 'Low' },
+] as const;
+
+const PIPELINE_FILTERS = [
+  { id: 'all', label: 'All stages' },
+  { id: 'not_built', label: 'Not built' },
+  { id: 'built', label: 'Built' },
+  { id: 'promoted', label: 'Promoted' },
+  { id: 'indexed', label: 'Indexed' },
+] as const;
+
+const SOURCE_FILTERS = [
+  { id: 'all', label: 'All sources' },
+  { id: 'seed_expansion', label: 'Seed' },
+  { id: 'reddit', label: 'Reddit' },
+  { id: 'medicare_gov', label: 'Medicare.gov' },
+  { id: 'ehealth', label: 'eHealth' },
+  { id: 'competitor', label: 'Competitor' },
+  { id: 'manual', label: 'Manual' },
+] as const;
+
+function FilterPill({
+  active,
+  onClick,
+  children,
+}: {
+  active: boolean;
+  onClick: () => void;
+  children: ReactNode;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      style={{
+        padding: '6px 12px',
+        borderRadius: 999,
+        fontSize: 11,
+        fontWeight: 600,
+        background: active ? 'rgba(0,113,227,0.22)' : 'rgba(255,255,255,0.04)',
+        color: active ? '#60a5fa' : '#cbd5e1',
+        border: `1px solid ${
+          active ? 'rgba(0,113,227,0.4)' : 'rgba(255,255,255,0.08)'
+        }`,
+        cursor: 'pointer',
+        transition: 'all 150ms',
+      }}
+    >
+      {children}
+    </button>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// QueueTab
+// ═══════════════════════════════════════════════════════════════════════════
+
+interface BatchProgress {
+  current: number;
+  total: number;
+  queryText: string;
+}
+
+interface QueueTabProps {
+  queue: QueryCandidate[];
+  setQueue: (updater: QueryCandidate[] | ((prev: QueryCandidate[]) => QueryCandidate[])) => void;
+  apiKeys: APIKeys;
+}
+
+function QueueTab({ queue, setQueue, apiKeys }: QueueTabProps) {
   const { addToPipeline } = useAppState();
-  const [cmData, setCmData] = useState<CMData>(() => getFromStorage(LS_CM_DATA, { results: [], lastScan: null, totalScans: 0 }));
-  const [claudeKey, setClaudeKey] = useState(() => getFromStorage(LS_CLAUDE_KEY, ''));
-  const [openaiKey, setOpenaiKey] = useState(() => getFromStorage(LS_OPENAI_KEY, ''));
-  const [perplexityKey, setPerplexityKey] = useState(() => getFromStorage(LS_PERPLEXITY_KEY, ''));
-  const [googleKey, setGoogleKey] = useState(() => getFromStorage(LS_GOOGLE_KEY, ''));
-  const [showKeys, setShowKeys] = useState(false);
-  const [scanning, setScanning] = useState(false);
-  const [scanCount, setScanCount] = useState(0);
-  const [scanTotal, setScanTotal] = useState(0);
-  const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [search, setSearch] = useState('');
+  const [intentFilter, setIntentFilter] = useState<string>('all');
+  const [pipelineFilter, setPipelineFilter] = useState<string>('all');
+  const [sourceFilter, setSourceFilter] = useState<string>('all');
+  const [sortBy, setSortBy] = useState<'intentScore' | 'dateAdded' | 'query'>('intentScore');
+  const [testingIds, setTestingIds] = useState<Set<string>>(new Set());
+  const [batchProgress, setBatchProgress] = useState<BatchProgress | null>(null);
+  const [modalQuery, setModalQuery] = useState<QueryCandidate | null>(null);
+  const [copyToast, setCopyToast] = useState<string>('');
+  const lastClickedIdRef = useRef<string | null>(null);
 
-  // Attack mode state
-  const [attackQuery, setAttackQuery] = useState<typeof CM_QUERIES[0] | null>(null);
-  const [generating, setGenerating] = useState(false);
-  const [genProgress, setGenProgress] = useState(0);
-  const [generatedQAs, setGeneratedQAs] = useState<QAPair[]>([]);
-  const [compareTable, setCompareTable] = useState<CompareTable | null>(null);
-  const [pageSlug, setPageSlug] = useState('');
-  const [showPreview, setShowPreview] = useState(false);
-  const [deployOpts, setDeployOpts] = useState({ website: true, schema: true, embed: false, compareTable: true });
+  // ── filtering + sorting ──
+  const filtered = useMemo(() => {
+    let out = queue.slice();
+    if (search.trim()) {
+      const s = search.trim().toLowerCase();
+      out = out.filter(
+        (q) =>
+          q.query.toLowerCase().includes(s) ||
+          (q.county || '').toLowerCase().includes(s) ||
+          (q.category || '').toLowerCase().includes(s)
+      );
+    }
+    if (intentFilter !== 'all') out = out.filter((q) => q.intent === intentFilter);
+    if (pipelineFilter !== 'all') {
+      out = out.filter((q) => {
+        const status = (q as { pipelineStatus?: string }).pipelineStatus || 'not_built';
+        return status === pipelineFilter;
+      });
+    }
+    if (sourceFilter !== 'all') out = out.filter((q) => q.source === sourceFilter);
+    out.sort((a, b) => {
+      if (sortBy === 'intentScore') return (b.intentScore || 0) - (a.intentScore || 0);
+      if (sortBy === 'dateAdded')
+        return (b.dateAdded || '').localeCompare(a.dateAdded || '');
+      if (sortBy === 'query') return a.query.localeCompare(b.query);
+      return 0;
+    });
+    return out;
+  }, [queue, search, intentFilter, pipelineFilter, sourceFilter, sortBy]);
 
-  useEffect(() => { saveToStorage(LS_CM_DATA, cmData); }, [cmData]);
-  useEffect(() => { saveToStorage(LS_CLAUDE_KEY, claudeKey); }, [claudeKey]);
-  useEffect(() => { saveToStorage(LS_OPENAI_KEY, openaiKey); }, [openaiKey]);
-  useEffect(() => { saveToStorage(LS_PERPLEXITY_KEY, perplexityKey); }, [perplexityKey]);
-  useEffect(() => { saveToStorage(LS_GOOGLE_KEY, googleKey); }, [googleKey]);
-
-  const queryResults = useMemo(() => { const map: Record<string, Record<string, ScanResult>> = {}; cmData.results.forEach((r) => { if (!map[r.queryId]) map[r.queryId] = {}; map[r.queryId][r.llm] = r; }); return map; }, [cmData.results]);
-  const filteredQueries = useMemo(() => categoryFilter ? CM_QUERIES.filter((q) => q.category === categoryFilter) : CM_QUERIES, [categoryFilter]);
-
+  // ── stats ──
   const stats = useMemo(() => {
-    const queriesChecked = new Set(cmData.results.map((r) => r.queryId)).size;
-    const cited = new Set(cmData.results.filter((r) => r.cited).map((r) => r.queryId)).size;
-    const winRate = queriesChecked > 0 ? Math.round((cited / queriesChecked) * 100) : 0;
-    return { queriesChecked, cited, winRate, total: CM_QUERIES.length, authorityScore: Math.round(winRate * 0.4 + Math.round((queriesChecked / CM_QUERIES.length) * 100) * 0.3 + winRate * 0.3) };
-  }, [cmData.results]);
+    const total = queue.length;
+    const tested = queue.filter((q) => {
+      const s = q.citationStatus || {};
+      return (
+        s.claude !== null ||
+        s.chatgpt !== null ||
+        s.perplexity !== null ||
+        s.gemini !== null
+      );
+    }).length;
+    const cited = queue.filter((q) => {
+      const s = q.citationStatus || {};
+      return (
+        s.claude === true ||
+        s.chatgpt === true ||
+        s.perplexity === true ||
+        s.gemini === true
+      );
+    }).length;
+    const high = queue.filter((q) => q.intent === 'high').length;
+    const built = queue.filter((q) => {
+      const status = (q as { pipelineStatus?: string }).pipelineStatus;
+      return status === 'built' || status === 'promoted' || status === 'indexed';
+    }).length;
+    return { total, tested, cited, high, built };
+  }, [queue]);
 
-  // Full scan
-  const runFullScan = useCallback(async () => {
-    const llms: Array<{ id: string; fn: (q: string, k: string) => Promise<LLMResult>; key: string }> = [];
-    if (claudeKey) llms.push({ id: 'claude', fn: queryClaude, key: claudeKey });
-    if (openaiKey) llms.push({ id: 'chatgpt', fn: queryChatGPT, key: openaiKey });
-    if (perplexityKey) llms.push({ id: 'perplexity', fn: queryPerplexity, key: perplexityKey });
-    if (googleKey) llms.push({ id: 'gemini', fn: queryGemini, key: googleKey });
-    if (llms.length === 0) { alert('Add at least one API key.'); return; }
-    setScanning(true); const total = CM_QUERIES.length * llms.length; setScanTotal(total); setScanCount(0);
-    const newResults: ScanResult[] = []; let count = 0;
-    for (const q of CM_QUERIES) { for (const llm of llms) { count++; setScanCount(count); try { const result = await llm.fn(q.query, llm.key); const citation = result.success ? detectCitation(result.response || '') : { cited: false, type: null, match: null }; const competitors = result.success ? detectCompetitors(result.response || '') : []; newResults.push({ queryId: q.id, llm: llm.id, cited: citation.cited, citationType: citation.type, match: citation.match, timestamp: new Date().toISOString(), snippet: result.response?.slice(0, 200), competitors }); } catch { newResults.push({ queryId: q.id, llm: llm.id, cited: false, citationType: null, match: null, timestamp: new Date().toISOString() }); } await new Promise((r) => setTimeout(r, 1500)); } }
-    setCmData({ results: newResults, lastScan: new Date().toISOString(), totalScans: cmData.totalScans + 1 });
-    setScanning(false);
-  }, [claudeKey, openaiKey, perplexityKey, googleKey, cmData.totalScans]);
+  const allSelected =
+    filtered.length > 0 && filtered.every((q) => selectedIds.has(q.id));
 
-  // Generate AEO content (intent-driven)
-  const generateAEOContent = useCallback(async (q: typeof CM_QUERIES[0]) => {
-    if (!claudeKey) { alert('Add Claude API key first'); return; }
-    setAttackQuery(q); setGenerating(true); setGenProgress(10); setGeneratedQAs([]); setCompareTable(null);
-    const slug = q.query.toLowerCase().replace(/[^a-z0-9\s-]/g, '').replace(/\s+/g, '-').slice(0, 50);
-    setPageSlug(slug);
-    const framing = INTENT_FRAMING[q.intent] || INTENT_FRAMING.confusion;
+  // ── selection ──
+  const handleSelect = (id: string, selected: boolean, shiftKey?: boolean) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (shiftKey && lastClickedIdRef.current) {
+        const ids = filtered.map((q) => q.id);
+        const fromIdx = ids.indexOf(lastClickedIdRef.current);
+        const toIdx = ids.indexOf(id);
+        if (fromIdx !== -1 && toIdx !== -1) {
+          const [lo, hi] = fromIdx < toIdx ? [fromIdx, toIdx] : [toIdx, fromIdx];
+          for (let i = lo; i <= hi; i++) next.add(ids[i]);
+        }
+      } else {
+        if (selected) next.add(id);
+        else next.delete(id);
+      }
+      lastClickedIdRef.current = id;
+      return next;
+    });
+  };
+
+  const handleSelectAll = () => {
+    if (allSelected) setSelectedIds(new Set());
+    else setSelectedIds(new Set(filtered.map((q) => q.id)));
+  };
+
+  // ── mutations ──
+  const handleDelete = (id: string) => {
+    setQueue((q) => q.filter((x) => x.id !== id));
+    setSelectedIds((prev) => {
+      const n = new Set(prev);
+      n.delete(id);
+      return n;
+    });
+  };
+
+  const handleBulkDelete = () => {
+    if (selectedIds.size === 0) return;
+    if (!window.confirm(`Delete ${selectedIds.size} queries?`)) return;
+    setQueue((q) => q.filter((x) => !selectedIds.has(x.id)));
+    setSelectedIds(new Set());
+  };
+
+  const handleEdit = (query: QueryCandidate) => {
+    const next = window.prompt('Edit query:', query.query);
+    if (next == null || !next.trim() || next === query.query) return;
+    setQueue((q) =>
+      q.map((x) =>
+        x.id === query.id ? classifyIntent([{ ...x, query: next.trim() }])[0] : x
+      )
+    );
+  };
+
+  const handleClear = () => {
+    if (queue.length === 0) return;
+    if (!window.confirm(`Clear all ${queue.length} queries?`)) return;
+    setQueue([]);
+    setSelectedIds(new Set());
+  };
+
+  // ── citation testing ──
+  const hasAnyKey = !!(
+    apiKeys.claude ||
+    apiKeys.chatgpt ||
+    apiKeys.perplexity ||
+    apiKeys.gemini
+  );
+
+  const handleTestOne = async (query: QueryCandidate) => {
+    if (!hasAnyKey) {
+      window.alert('Add at least one LLM API key in Settings first.');
+      return;
+    }
+    setTestingIds((prev) => new Set(prev).add(query.id));
     try {
-      setGenProgress(30);
-      const systemPrompt = `You are an AEO content specialist for GenerationHealth.me.\n\n═══ USER INTENT: ${q.intent.toUpperCase()} ═══\nThe person asking this is feeling: "${q.emotion}"\n\n${framing.opening}\n\nEMOTIONAL HOOK: ${framing.emotional_hook}\nCTA TONE: ${framing.cta_tone}\n\nGenerate:\n1. 8 Q&A PAIRS - Each 2-4 sentences with 2026 Medicare figures, NC-specific, NEPQ tone\n2. COMPARISON TABLE (if topic involves comparing) with broker insight\n\nAuthor: Rob Simm, NC License #10447418, Phone: (828) 761-3326, Durham NC\n\nOUTPUT FORMAT (JSON only, no markdown):\n{"qas":[{"question":"text","answer":"text","aeoScore":85}],"compareTable":{"title":"text","options":["A","B"],"recommended":0,"rows":[{"feature":"text","values":["a","b"],"goodIndex":0}],"brokerInsight":"text"} or null}`;
-      setGenProgress(50);
-      const resp = await fetch('https://api.anthropic.com/v1/messages', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-api-key': claudeKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' }, body: JSON.stringify({ model: 'claude-sonnet-4-20250514', max_tokens: 4000, system: systemPrompt, messages: [{ role: 'user', content: `Generate AEO content for: "${q.query}"\nIntent: ${q.intent.toUpperCase()}\nEmotion: "${q.emotion}"` }] }) });
-      setGenProgress(80);
-      const data = await resp.json();
-      const txt = data.content?.[0]?.text || '{}';
-      const result = JSON.parse(txt.replace(/```json|```/g, '').trim());
-      setGeneratedQAs((result.qas || []).map((qa: QAPair, i: number) => ({ ...qa, id: `qa-${i + 1}` })));
-      setCompareTable(result.compareTable || null);
-      setGenProgress(100);
-    } catch (e) { alert('Generation error: ' + (e instanceof Error ? e.message : String(e))); setGenProgress(0); }
-    setGenerating(false);
-  }, [claudeKey]);
+      const [updated] = await testCitations([query], apiKeys);
+      setQueue((q) => q.map((x) => (x.id === query.id ? updated : x)));
+    } catch (err) {
+      console.error('[CitationMonitor] test failed:', err);
+      window.alert('Test failed: ' + (err instanceof Error ? err.message : String(err)));
+    } finally {
+      setTestingIds((prev) => {
+        const n = new Set(prev);
+        n.delete(query.id);
+        return n;
+      });
+    }
+  };
 
-  // Deploy
-  const handleDeploy = useCallback(() => {
-    const html = buildAEOPageHtml(generatedQAs, compareTable, pageSlug, attackQuery?.query || '', attackQuery?.intent || 'confusion', deployOpts);
-    if (!html) { alert('Generate Q&As first'); return; }
-    navigator.clipboard.writeText(html);
-    const entry: AeoPipelineEntry = { id: `aeo-${Date.now()}`, queryId: attackQuery?.id || '', query: attackQuery?.query || '', title: attackQuery?.query.split(' ').map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ') || '', slug: pageSlug, html, deployedAt: new Date().toISOString() };
+  const handleTestSelected = async () => {
+    if (!hasAnyKey) {
+      window.alert('Add at least one LLM API key in Settings first.');
+      return;
+    }
+    if (selectedIds.size === 0) {
+      window.alert('No queries selected.');
+      return;
+    }
+    const targets = queue.filter((q) => selectedIds.has(q.id));
+    setTestingIds(new Set(targets.map((q) => q.id)));
+    setBatchProgress({ current: 0, total: targets.length, queryText: '' });
+    try {
+      const updated = await batchTestWithProgress(
+        targets,
+        apiKeys,
+        (current, total, queryText) => {
+          setBatchProgress({ current, total, queryText });
+        }
+      );
+      const byId = new Map(updated.map((u) => [u.id, u]));
+      setQueue((q) => q.map((x) => byId.get(x.id) || x));
+    } catch (err) {
+      console.error('[CitationMonitor] batch test failed:', err);
+      window.alert(
+        'Batch test failed: ' + (err instanceof Error ? err.message : String(err))
+      );
+    } finally {
+      setTestingIds(new Set());
+      setBatchProgress(null);
+    }
+  };
+
+  const handleGeneratePage = (query: QueryCandidate) => {
+    setModalQuery(query);
+  };
+
+  const handlePageGenerated = (updated: QueryCandidate) => {
+    setQueue((q) => q.map((x) => (x.id === updated.id ? updated : x)));
+  };
+
+  // ── Copy-for-WordPress headless quick action ──
+  // Runs the full detect/load/generate/validate pipeline without opening the
+  // modal, then writes a WordPress-embed-shaped HTML fragment to the clipboard
+  // (no outer <html>/<head>/<body>, <style> block inlined, JSON-LD preserved).
+  // On success: flips the row to BUILT, pushes an entry into the AEO Pipeline
+  // tracker, and shows a 2-second toast. On failure: shows the reason in the
+  // toast for 3 seconds.
+  const handleCopyEmbed = async (query: QueryCandidate) => {
+    const result = buildPageForQuery(query, 'wp-embed');
+
+    if (!result.ok) {
+      setCopyToast(`✗ ${result.failureReason || 'Copy failed'}`);
+      setTimeout(() => setCopyToast(''), 3000);
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(result.html);
+    } catch {
+      setCopyToast('✗ Clipboard blocked by browser');
+      setTimeout(() => setCopyToast(''), 3000);
+      return;
+    }
+
+    // Push into AEO Pipeline tracker (same contract as PageGenerationModal)
+    const entry: AeoPipelineEntry = {
+      id: `aeo3-${query.id}-${Date.now()}`,
+      queryId: query.id,
+      query: query.query,
+      title: result.title || `Medicare Broker ${result.county} NC`,
+      slug: `medicare-broker-${result.slug}-nc`,
+      html: result.html,
+    };
     addToPipeline(entry);
-    alert(`✅ AEO page deployed!\n\n📋 HTML copied to clipboard\n📣 Queued in Content Studio\n🚀 Queued in Indexing\n\nPaste into Elementor at: /${pageSlug}`);
-  }, [generatedQAs, compareTable, pageSlug, attackQuery, deployOpts, addToPipeline]);
 
-  const inputCls = "w-full px-3 py-2 rounded-lg border border-white/[0.12] bg-white/[0.04] text-white text-xs outline-none";
+    // Flip the row to BUILT
+    setQueue((q) =>
+      q.map((x) =>
+        x.id === query.id
+          ? ({
+              ...x,
+              county: result.county,
+              ...({
+                pipelineStatus: 'built',
+                lastBuilt: new Date().toISOString(),
+              } as object),
+            } as QueryCandidate)
+          : x
+      )
+    );
+
+    const warnCount = result.warnings.length;
+    setCopyToast(
+      warnCount > 0
+        ? `✓ Copied to clipboard (${warnCount} warning${warnCount === 1 ? '' : 's'})`
+        : '✓ Copied to clipboard — ready to paste into Elementor'
+    );
+    setTimeout(() => setCopyToast(''), 2500);
+  };
+
+  const handleExport = () => {
+    const blob = new Blob([JSON.stringify(queue, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `gh-queue-${new Date().toISOString().slice(0, 10)}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div><h2 className="font-display text-xl font-bold text-white flex items-center gap-2"><span>🎯</span> Citation Monitor</h2><p className="text-xs text-gh-text-muted mt-1">{stats.total} queries · 7 categories · Intent-driven AEO · Competitor tracking</p></div>
-        <div className="flex items-center gap-2">
-          <button onClick={() => setShowKeys(!showKeys)} className="px-3 py-2 rounded-xl text-xs font-semibold border border-white/10 text-gh-text-muted"><Key className="w-3 h-3 inline mr-1" />API Keys</button>
-          <button onClick={runFullScan} disabled={scanning} className="px-4 py-2.5 rounded-xl text-xs font-bold bg-gradient-to-r from-purple-500 to-blue-500 text-white disabled:opacity-50">{scanning ? <span className="flex items-center gap-1.5"><Loader2 className="w-3.5 h-3.5 animate-spin" />{scanCount}/{scanTotal}</span> : <span className="flex items-center gap-1.5"><Play className="w-3 h-3" />Run Full Scan</span>}</button>
-        </div>
-      </div>
-      {showKeys && <div className="card p-5 space-y-3"><div className="text-[11px] font-bold text-gh-text-muted uppercase tracking-widest">API Keys</div><div className="grid grid-cols-1 md:grid-cols-2 gap-3"><div><label className="text-[10px] font-bold text-gh-text-muted block mb-1">Claude</label><input type="password" value={claudeKey} onChange={(e) => setClaudeKey(e.target.value)} placeholder="sk-ant-..." className={inputCls} /></div><div><label className="text-[10px] font-bold text-gh-text-muted block mb-1">ChatGPT</label><input type="password" value={openaiKey} onChange={(e) => setOpenaiKey(e.target.value)} placeholder="sk-..." className={inputCls} /></div><div><label className="text-[10px] font-bold text-gh-text-muted block mb-1">Perplexity</label><input type="password" value={perplexityKey} onChange={(e) => setPerplexityKey(e.target.value)} placeholder="pplx-..." className={inputCls} /></div><div><label className="text-[10px] font-bold text-gh-text-muted block mb-1">Gemini</label><input type="password" value={googleKey} onChange={(e) => setGoogleKey(e.target.value)} placeholder="AI..." className={inputCls} /></div></div></div>}
-
-      {/* Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-        {[{ label: 'AUTHORITY', value: stats.authorityScore, color: '#4B9CD3' }, { label: 'WIN RATE', value: `${stats.winRate}%`, color: stats.winRate > 0 ? '#4ADE80' : '#6B7B8D' }, { label: 'CITED', value: `${stats.cited}/${stats.total}`, color: stats.cited > 0 ? '#4ADE80' : '#6B7B8D' }, { label: 'COVERAGE', value: `${Math.round((stats.queriesChecked / stats.total) * 100)}%`, color: '#A78BFA' }, { label: 'SCANS', value: cmData.totalScans, color: '#FFC72C' }].map((s) => (
-          <div key={s.label} className="card p-3 text-center"><div className="text-xl font-extrabold tabular-nums" style={{ color: typeof s.color === 'string' ? s.color : '#fff' }}>{s.value}</div><div className="text-[10px] font-semibold text-gh-text-muted uppercase tracking-wider mt-0.5">{s.label}</div></div>
+    <div className="space-y-4">
+      {/* Stats strip */}
+      <div className="grid grid-cols-5 gap-2">
+        {[
+          { label: 'Total', value: stats.total, color: '#fff' },
+          { label: 'Tested', value: stats.tested, color: '#60a5fa' },
+          { label: 'Cited', value: stats.cited, color: '#4ade80' },
+          { label: 'High', value: stats.high, color: '#f87171' },
+          { label: 'Built', value: stats.built, color: '#c084fc' },
+        ].map((s, i) => (
+          <div key={i} className="card p-3 text-center">
+            <div
+              style={{
+                fontSize: 22,
+                fontWeight: 800,
+                color: s.color,
+                fontVariantNumeric: 'tabular-nums',
+              }}
+            >
+              {s.value}
+            </div>
+            <div
+              style={{
+                fontSize: 9,
+                fontWeight: 700,
+                color: 'var(--gh-text-muted)',
+                letterSpacing: '0.08em',
+                textTransform: 'uppercase',
+                marginTop: 2,
+              }}
+            >
+              {s.label}
+            </div>
+          </div>
         ))}
       </div>
 
-      {/* Categories */}
-      <div className="flex gap-1.5 flex-wrap">
-        <button onClick={() => setCategoryFilter(null)} className={`px-3 py-1.5 rounded-lg text-[11px] font-bold transition-all ${!categoryFilter ? 'bg-white/[0.12] text-white' : 'bg-white/[0.04] text-gh-text-muted'}`}>All ({CM_QUERIES.length})</button>
-        {CM_CATEGORIES.map((cat) => (<button key={cat.id} onClick={() => setCategoryFilter(categoryFilter === cat.id ? null : cat.id)} className="px-3 py-1.5 rounded-lg text-[11px] font-bold transition-all" style={{ background: categoryFilter === cat.id ? `${cat.color}25` : 'rgba(255,255,255,0.04)', color: categoryFilter === cat.id ? cat.color : '#6B7B8D' }}>{cat.name} ({CM_QUERIES.filter((q) => q.category === cat.id).length})</button>))}
+      {/* Search + sort */}
+      <div
+        className="card p-3"
+        style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}
+      >
+        <div style={{ position: 'relative', flex: '1 1 260px', minWidth: 220 }}>
+          <Search
+            size={14}
+            style={{
+              position: 'absolute',
+              left: 10,
+              top: '50%',
+              transform: 'translateY(-50%)',
+              color: '#6b7280',
+            }}
+          />
+          <input
+            type="search"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search queries, counties, categories…"
+            style={{ width: '100%', paddingLeft: 32 }}
+          />
+        </div>
+        <select
+          value={sortBy}
+          onChange={(e) => setSortBy(e.target.value as 'intentScore' | 'dateAdded' | 'query')}
+        >
+          <option value="intentScore">Sort: Intent Score</option>
+          <option value="dateAdded">Sort: Date Added</option>
+          <option value="query">Sort: A–Z</option>
+        </select>
+        <button onClick={handleExport} style={{ ...secondaryBtnStyle, padding: '8px 12px' }}>
+          <Download size={13} style={{ marginRight: 6 }} />
+          Export JSON
+        </button>
+        <button
+          onClick={handleClear}
+          style={{ ...secondaryBtnStyle, padding: '8px 12px', color: '#fca5a5' }}
+        >
+          <Trash2 size={13} style={{ marginRight: 6 }} />
+          Clear All
+        </button>
       </div>
 
-      {/* ═══ ATTACK MODE PANEL ═══ */}
-      {attackQuery && (
-        <div className="card overflow-hidden" style={{ border: '2px solid rgba(248,113,113,0.3)' }}>
-          <div className="px-5 py-4" style={{ background: 'linear-gradient(135deg, rgba(248,113,113,0.15), rgba(248,113,113,0.05))' }}>
-            <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center gap-2"><span className="text-lg">🎯</span><span className="text-sm font-bold text-red-400">Attack Mode</span></div>
-              <button onClick={() => { setAttackQuery(null); setGeneratedQAs([]); }} className="px-3 py-1 rounded-lg text-[10px] border border-white/10 text-gh-text-muted">✕ Close</button>
-            </div>
-            <div className="text-base font-bold text-white">&ldquo;{attackQuery.query}&rdquo;</div>
-            <div className="flex items-center gap-2 mt-2">
-              {attackQuery.intent && <span className="text-[9px] px-2 py-1 rounded font-bold uppercase" style={{ background: INTENT_COLORS[attackQuery.intent]?.bg, color: INTENT_COLORS[attackQuery.intent]?.color }}>{INTENT_COLORS[attackQuery.intent]?.icon} {attackQuery.intent}</span>}
-              <span className="text-[10px] text-gh-text-muted italic">&ldquo;{attackQuery.emotion}&rdquo;</span>
-            </div>
-          </div>
-          {/* Progress */}
-          <div className="px-5 py-3 border-b border-white/[0.06]">
-            <div className="flex items-center gap-3 mb-2">
-              <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ${genProgress >= 100 ? 'bg-emerald-600 text-white' : 'bg-white/[0.08] text-gh-text-muted'}`}>{genProgress >= 100 ? '✓' : `${genProgress}%`}</div>
-              <div><div className="text-xs font-semibold text-white">{genProgress >= 100 ? `${generatedQAs.length} Q&As${compareTable ? ' + Table' : ''} Generated` : generating ? 'Generating...' : 'Ready'}</div></div>
-            </div>
-            <div className="w-full h-1 bg-white/[0.06] rounded-full overflow-hidden"><div className="h-1 rounded-full bg-emerald-500 transition-all" style={{ width: `${genProgress}%` }} /></div>
-          </div>
-          {/* Generated Q&As */}
-          {generatedQAs.length > 0 && (
-            <div className="px-5 py-3 max-h-[300px] overflow-y-auto space-y-2">
-              {generatedQAs.map((qa, i) => (
-                <div key={qa.id} className="p-3 rounded-xl bg-white/[0.03] border border-white/[0.06]">
-                  <div className="flex items-start gap-2"><div className="w-5 h-5 rounded-full bg-carolina flex items-center justify-center text-[10px] font-bold text-white flex-shrink-0">{i + 1}</div><div className="flex-1"><div className="text-xs font-semibold text-white mb-1">{qa.question}</div><div className="text-[11px] text-gh-text-muted leading-relaxed">{qa.answer.slice(0, 150)}...</div><span className="text-[9px] px-1.5 py-0.5 rounded mt-1 inline-block" style={{ background: qa.aeoScore >= 90 ? 'rgba(74,222,128,0.15)' : 'rgba(255,199,44,0.15)', color: qa.aeoScore >= 90 ? '#4ADE80' : '#FFC72C' }}>AEO: {qa.aeoScore}</span></div></div>
-                </div>
-              ))}
-            </div>
-          )}
-          {/* Deploy */}
-          {generatedQAs.length > 0 && (
-            <div className="px-5 py-4 bg-white/[0.02] border-t border-white/[0.06] space-y-3">
-              <div className="text-[10px] text-gh-text-muted font-mono">/{pageSlug}</div>
-              <div className="flex flex-wrap gap-4 text-xs">
-                <label className="flex items-center gap-2 text-gh-text-soft"><input type="checkbox" checked={deployOpts.website} onChange={(e) => setDeployOpts((p) => ({ ...p, website: e.target.checked }))} className="accent-emerald-500" />Website</label>
-                <label className="flex items-center gap-2 text-gh-text-soft"><input type="checkbox" checked={deployOpts.schema} onChange={(e) => setDeployOpts((p) => ({ ...p, schema: e.target.checked }))} className="accent-emerald-500" />Schema</label>
-                <label className="flex items-center gap-2 text-gh-text-muted"><input type="checkbox" checked={deployOpts.embed} onChange={(e) => setDeployOpts((p) => ({ ...p, embed: e.target.checked }))} className="accent-emerald-500" />Embed</label>
-                {compareTable && <label className="flex items-center gap-2 text-purple-400 font-semibold"><input type="checkbox" checked={deployOpts.compareTable} onChange={(e) => setDeployOpts((p) => ({ ...p, compareTable: e.target.checked }))} className="accent-purple-500" />📊 Table</label>}
-              </div>
-              <div className="flex gap-2">
-                <button onClick={handleDeploy} className="flex-1 py-3 rounded-xl text-sm font-bold bg-gradient-to-r from-emerald-500 to-green-500 text-white">🚀 Deploy AEO Page</button>
-                <button onClick={() => setShowPreview(true)} className="px-4 py-3 rounded-xl text-sm font-bold border border-white/10 text-gh-text-soft"><Eye className="w-4 h-4 inline mr-1" />Preview</button>
-              </div>
-              <button onClick={() => { if (attackQuery) generateAEOContent(attackQuery); }} className="w-full py-2 rounded-lg text-xs font-bold border border-white/10 text-gh-text-muted">Regenerate</button>
-            </div>
-          )}
+      {/* Filter pills */}
+      <div
+        className="card p-3"
+        style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}
+      >
+        <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+          <span
+            style={{
+              fontSize: 10,
+              fontWeight: 700,
+              color: 'var(--gh-text-muted)',
+              letterSpacing: '0.08em',
+              textTransform: 'uppercase',
+            }}
+          >
+            Intent:
+          </span>
+          {INTENT_FILTERS.map((f) => (
+            <FilterPill
+              key={f.id}
+              active={intentFilter === f.id}
+              onClick={() => setIntentFilter(f.id)}
+            >
+              {f.label}
+            </FilterPill>
+          ))}
+        </div>
+        <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+          <span
+            style={{
+              fontSize: 10,
+              fontWeight: 700,
+              color: 'var(--gh-text-muted)',
+              letterSpacing: '0.08em',
+              textTransform: 'uppercase',
+            }}
+          >
+            Stage:
+          </span>
+          <select value={pipelineFilter} onChange={(e) => setPipelineFilter(e.target.value)}>
+            {PIPELINE_FILTERS.map((f) => (
+              <option key={f.id} value={f.id}>
+                {f.label}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+          <span
+            style={{
+              fontSize: 10,
+              fontWeight: 700,
+              color: 'var(--gh-text-muted)',
+              letterSpacing: '0.08em',
+              textTransform: 'uppercase',
+            }}
+          >
+            Source:
+          </span>
+          <select value={sourceFilter} onChange={(e) => setSourceFilter(e.target.value)}>
+            {SOURCE_FILTERS.map((f) => (
+              <option key={f.id} value={f.id}>
+                {f.label}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+
+      {/* Bulk action bar */}
+      {selectedIds.size > 0 && (
+        <div
+          className="card p-3"
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 10,
+            borderColor: 'rgba(0,113,227,0.35)',
+            background: 'rgba(0,113,227,0.06)',
+          }}
+        >
+          <span style={{ fontSize: 12, fontWeight: 600, color: '#60a5fa' }}>
+            {selectedIds.size} selected
+          </span>
+          <div style={{ flex: 1 }} />
+          <button onClick={handleTestSelected} style={primaryBtnStyle}>
+            <TestTube size={13} style={{ marginRight: 6 }} />
+            Test Citations
+          </button>
+          <button
+            onClick={handleBulkDelete}
+            style={{ ...secondaryBtnStyle, color: '#fca5a5' }}
+          >
+            <Trash2 size={13} style={{ marginRight: 6 }} />
+            Delete
+          </button>
+          <button onClick={() => setSelectedIds(new Set())} style={secondaryBtnStyle}>
+            Clear
+          </button>
         </div>
       )}
 
-      {/* ═══ QUERY TABLE ═══ */}
-      <div className="overflow-x-auto">
-        <table className="w-full border-collapse">
-          <thead><tr>{['#', 'QUERY', 'INTENT', 'CAT', 'CLAUDE', 'GPT', 'PPLX', 'GEMINI', 'COMPETITORS', ''].map((h) => <th key={h} className="px-2.5 py-2 text-[10px] font-bold text-gh-text-muted uppercase tracking-wider border-b border-white/[0.06] text-left whitespace-nowrap">{h}</th>)}</tr></thead>
-          <tbody>
-            {filteredQueries.map((q, qi) => {
-              const results = queryResults[q.id] || {};
-              const cat = CM_CATEGORIES.find((c) => c.id === q.category);
-              const anyCited = Object.values(results).some((r) => r.cited);
-              const allComps = new Set<string>();
-              Object.values(results).forEach((r) => r.competitors?.forEach((c) => allComps.add(c)));
-              const ic = INTENT_COLORS[q.intent] || INTENT_COLORS.confusion;
-              return (
-                <tr key={q.id} className={`border-b border-white/[0.04] hover:bg-white/[0.02] ${attackQuery?.id === q.id ? 'bg-red-500/[0.08]' : ''}`}>
-                  <td className="px-2.5 py-2.5 text-xs text-gh-text-faint tabular-nums">{qi + 1}</td>
-                  <td className="px-2.5 py-2.5"><div className="text-xs font-medium text-white">{q.query}</div><div className="text-[10px] text-gh-text-faint italic mt-0.5">{q.emotion}</div></td>
-                  <td className="px-2.5 py-2.5"><span className="text-[9px] font-bold px-1.5 py-0.5 rounded uppercase" style={{ background: ic.bg, color: ic.color }}>{ic.icon} {q.intent}</span></td>
-                  <td className="px-2.5 py-2.5"><span className="text-[9px] font-bold px-1.5 py-0.5 rounded" style={{ background: `${cat?.color || '#6B7B8D'}18`, color: cat?.color || '#6B7B8D' }}>{cat?.name?.split(' ')[0]}</span></td>
-                  {(['claude', 'chatgpt', 'perplexity', 'gemini'] as const).map((llm) => { const r = results[llm]; if (!r) return <td key={llm} className="px-2.5 py-2.5 text-center"><span className="text-[10px] text-gh-text-faint">—</span></td>; return <td key={llm} className="px-2.5 py-2.5 text-center">{r.cited ? <Check className="w-3.5 h-3.5 text-emerald-400 inline" /> : <X className="w-3.5 h-3.5 text-red-400 inline" />}</td>; })}
-                  <td className="px-2.5 py-2.5"><div className="flex flex-wrap gap-1">{Array.from(allComps).slice(0, 2).map((c) => <span key={c} className="text-[9px] bg-white/[0.06] text-gh-text-muted px-1.5 py-0.5 rounded">{c}</span>)}</div></td>
-                  <td className="px-2.5 py-2.5">{!anyCited && Object.keys(results).length > 0 && <button onClick={() => generateAEOContent(q)} className="px-2.5 py-1 rounded text-[10px] font-bold border border-red-400/30 text-red-400 hover:bg-red-400/10">Attack →</button>}{anyCited && Object.keys(results).length > 0 && Object.values(results).filter((r) => r.cited).length < Object.keys(results).length && <button onClick={() => generateAEOContent(q)} className="px-2.5 py-1 rounded text-[10px] font-bold border border-amber-400/30 text-amber-400 hover:bg-amber-400/10">Defend →</button>}</td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
-
-      {/* ═══ PREVIEW MODAL ═══ */}
-      {showPreview && generatedQAs.length > 0 && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[10000] flex flex-col p-5" onClick={() => setShowPreview(false)}>
-          <div className="flex items-center justify-between px-6 py-3 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center gap-3"><span className="text-lg">👁️</span><div><div className="text-base font-bold text-white">AEO Page Preview</div><div className="text-xs text-gh-text-muted">/{pageSlug} · {generatedQAs.length} Q&As{compareTable ? ' + Table' : ''}</div></div></div>
-            <div className="flex gap-3">
-              <button onClick={(e) => { e.stopPropagation(); const html = buildAEOPageHtml(generatedQAs, compareTable, pageSlug, attackQuery?.query || '', attackQuery?.intent || 'confusion', deployOpts); navigator.clipboard.writeText(html); alert('✅ Copied!'); }} className="px-4 py-2 rounded-lg text-xs font-bold bg-emerald-600 text-white">📋 Copy HTML</button>
-              <button onClick={(e) => { e.stopPropagation(); setShowPreview(false); }} className="px-4 py-2 rounded-lg text-xs font-bold bg-red-500 text-white">✕ Close</button>
-            </div>
+      {/* Batch progress */}
+      {batchProgress && (
+        <div className="card p-3" style={{ borderColor: 'rgba(0,113,227,0.35)' }}>
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              fontSize: 11,
+              color: 'var(--gh-text-soft)',
+              marginBottom: 6,
+            }}
+          >
+            <span>
+              Testing: <em style={{ color: '#cbd5e1' }}>{batchProgress.queryText || '…'}</em>
+            </span>
+            <span style={{ color: '#60a5fa', fontWeight: 700 }}>
+              {batchProgress.current} / {batchProgress.total}
+            </span>
           </div>
-          <div className="flex-1 rounded-2xl overflow-hidden mx-auto w-full max-w-[960px] bg-white shadow-2xl" onClick={(e) => e.stopPropagation()}>
-            <iframe srcDoc={`<!DOCTYPE html><html><head><meta charset='UTF-8'><meta name='viewport' content='width=device-width,initial-scale=1.0'><link href='https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Fraunces:wght@400;600;700;800&display=swap' rel='stylesheet'></head><body style='margin:0;font-family:DM Sans,sans-serif'>${buildAEOPageHtml(generatedQAs, compareTable, pageSlug, attackQuery?.query || '', attackQuery?.intent || 'confusion', deployOpts)}</body></html>`} className="w-full h-full border-none" title="AEO Preview" />
+          <div
+            style={{
+              width: '100%',
+              height: 6,
+              background: 'rgba(255,255,255,0.06)',
+              borderRadius: 999,
+              overflow: 'hidden',
+            }}
+          >
+            <div
+              style={{
+                height: '100%',
+                background: 'linear-gradient(90deg,#0071e3,#60a5fa)',
+                width: `${(batchProgress.current / batchProgress.total) * 100}%`,
+                transition: 'width 300ms',
+              }}
+            />
           </div>
         </div>
+      )}
+
+      {/* List */}
+      <div className="card" style={{ overflow: 'hidden' }}>
+        {/* Header row */}
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 12,
+            padding: '10px 14px 10px 10px',
+            borderBottom: '1px solid rgba(255,255,255,0.08)',
+            background: 'rgba(255,255,255,0.02)',
+          }}
+        >
+          <input
+            type="checkbox"
+            checked={allSelected}
+            onChange={handleSelectAll}
+            aria-label="Select all visible"
+            style={{ width: 16, height: 16, accentColor: '#0071e3', cursor: 'pointer' }}
+          />
+          <div
+            style={{
+              fontSize: 10,
+              fontWeight: 700,
+              color: 'var(--gh-text-muted)',
+              letterSpacing: '0.08em',
+              textTransform: 'uppercase',
+            }}
+          >
+            {filtered.length} {filtered.length === 1 ? 'query' : 'queries'}
+            {filtered.length !== queue.length && ` (of ${queue.length})`}
+          </div>
+        </div>
+
+        {filtered.length === 0 ? (
+          <div style={{ padding: 40, textAlign: 'center', color: 'var(--gh-text-faint)' }}>
+            {queue.length === 0 ? (
+              <div>
+                <Inbox size={32} style={{ opacity: 0.4, marginBottom: 8 }} />
+                <div style={{ fontSize: 13 }}>Queue is empty.</div>
+                <div style={{ fontSize: 11, marginTop: 4 }}>
+                  Head to the <strong>Generate</strong> tab to expand seeds, or{' '}
+                  <strong>Scrape</strong> to pull queries from the web.
+                </div>
+              </div>
+            ) : (
+              <div style={{ fontSize: 13 }}>No queries match the current filters.</div>
+            )}
+          </div>
+        ) : (
+          filtered.map((q) => (
+            <QueryRow
+              key={q.id}
+              query={q}
+              selected={selectedIds.has(q.id)}
+              isTesting={testingIds.has(q.id)}
+              onSelect={handleSelect}
+              onTest={handleTestOne}
+              onGeneratePage={handleGeneratePage}
+              onCopyEmbed={handleCopyEmbed}
+              onEdit={handleEdit}
+              onDelete={handleDelete}
+            />
+          ))
+        )}
+      </div>
+
+      {/* Generation modal */}
+      {modalQuery && (
+        <PageGenerationModal
+          query={modalQuery}
+          onClose={() => setModalQuery(null)}
+          onGenerated={handlePageGenerated}
+        />
+      )}
+
+      {/* Copy-to-clipboard toast */}
+      {copyToast && (
+        <div
+          role="status"
+          aria-live="polite"
+          style={{
+            position: 'fixed',
+            bottom: 24,
+            left: '50%',
+            transform: 'translateX(-50%)',
+            background: copyToast.startsWith('✗') ? '#7f1d1d' : '#064e3b',
+            color: '#fff',
+            padding: '12px 20px',
+            borderRadius: 10,
+            fontSize: 14,
+            fontWeight: 600,
+            boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
+            border: `1px solid ${
+              copyToast.startsWith('✗') ? '#b91c1c' : '#10b981'
+            }`,
+            zIndex: 9999,
+            maxWidth: '90vw',
+          }}
+        >
+          {copyToast}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// GenerateTab — QueueManagerPanel wrapper
+// ═══════════════════════════════════════════════════════════════════════════
+
+interface GenerateTabProps {
+  queue: QueryCandidate[];
+  setQueue: (updater: QueryCandidate[] | ((prev: QueryCandidate[]) => QueryCandidate[])) => void;
+}
+
+function GenerateTab({ queue, setQueue }: GenerateTabProps) {
+  const [lastMerge, setLastMerge] = useState<{
+    generated: number;
+    addedAfterDedup: number;
+    totalNow: number;
+  } | null>(null);
+
+  const handleGenerated = (newQueries: QueryCandidate[]) => {
+    const combined = [...queue, ...newQueries];
+    const deduped = deduplicateQueries(combined);
+    setQueue(deduped);
+    setLastMerge({
+      generated: newQueries.length,
+      addedAfterDedup: deduped.length - queue.length,
+      totalNow: deduped.length,
+    });
+  };
+
+  return (
+    <div className="space-y-4">
+      <QueueManagerPanel onQueriesGenerated={handleGenerated} />
+      {lastMerge && (
+        <div className="card p-4" style={{ borderColor: 'rgba(74,222,128,0.22)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+            <CheckCircle size={16} style={{ color: '#4ade80' }} />
+            <strong style={{ fontSize: 13, color: '#fff' }}>Merged into queue</strong>
+          </div>
+          <div style={{ fontSize: 12, color: 'var(--gh-text-soft)' }}>
+            Generated <strong>{lastMerge.generated}</strong> queries · Added{' '}
+            <strong>{lastMerge.addedAfterDedup}</strong> after dedup · Queue now has{' '}
+            <strong>{lastMerge.totalNow}</strong> total.
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// ScrapeTab
+// ═══════════════════════════════════════════════════════════════════════════
+
+// window.GHScrapers type (loaded via public/gh-scrapers.js)
+interface GHScrapersAPI {
+  runAll: (opts?: { competitorUrls?: string[] }) => Promise<QueryCandidate[]>;
+  scrapeReddit: () => Promise<QueryCandidate[]>;
+  scrapeMedicareGov: () => Promise<QueryCandidate[]>;
+  scrapeEhealth: () => Promise<QueryCandidate[]>;
+  scrapeCompetitors: (urls: string[]) => Promise<QueryCandidate[]>;
+}
+
+declare global {
+  interface Window {
+    GHScrapers?: GHScrapersAPI;
+  }
+}
+
+interface ScrapeSource {
+  id: string;
+  label: string;
+  Icon: typeof MessageSquare;
+  desc: string;
+  fn: keyof GHScrapersAPI;
+  needsUrls?: boolean;
+}
+
+const SCRAPE_SOURCES: ScrapeSource[] = [
+  {
+    id: 'reddit',
+    label: 'Reddit',
+    Icon: MessageSquare,
+    desc: 'Scrapes r/Medicare and related subs for real-person questions.',
+    fn: 'scrapeReddit',
+  },
+  {
+    id: 'medicare_gov',
+    label: 'Medicare.gov',
+    Icon: Globe,
+    desc: 'Pulls FAQ/Help topics via the PHP scrape proxy.',
+    fn: 'scrapeMedicareGov',
+  },
+  {
+    id: 'ehealth',
+    label: 'eHealth',
+    Icon: ShoppingBag,
+    desc: 'Scrapes eHealthInsurance Medicare pages via proxy.',
+    fn: 'scrapeEhealth',
+  },
+  {
+    id: 'competitors',
+    label: 'Competitors',
+    Icon: Target,
+    desc: 'Scrapes competitor landing pages (configurable URLs).',
+    fn: 'scrapeCompetitors',
+    needsUrls: true,
+  },
+];
+
+interface ScrapeLogEntry {
+  source: string;
+  ts: string;
+  count?: number;
+  added?: number;
+  error?: string;
+}
+
+interface ScrapeTabProps {
+  queue: QueryCandidate[];
+  setQueue: (updater: QueryCandidate[] | ((prev: QueryCandidate[]) => QueryCandidate[])) => void;
+}
+
+function ScrapeTab({ queue, setQueue }: ScrapeTabProps) {
+  const [running, setRunning] = useState<string | null>(null);
+  const [log, setLog] = useState<ScrapeLogEntry[]>([]);
+  const [competitorUrls, setCompetitorUrls] = useState(
+    'https://www.boomerbenefits.com/medicare/\nhttps://www.ehealthinsurance.com/medicare/'
+  );
+  const [ghAvailable, setGhAvailable] = useState(false);
+
+  useEffect(() => {
+    // window.GHScrapers is set by public/gh-scrapers.js loaded via <Script>
+    setGhAvailable(typeof window !== 'undefined' && !!window.GHScrapers);
+  }, []);
+
+  const appendLog = (entry: ScrapeLogEntry) =>
+    setLog((l) => [entry, ...l].slice(0, 20));
+
+  const runScraper = async (source: ScrapeSource) => {
+    const GH = window.GHScrapers;
+    if (!GH || typeof GH[source.fn] !== 'function') {
+      appendLog({
+        source: source.label,
+        error: 'Scraper function not available',
+        ts: new Date().toISOString(),
+      });
+      return;
+    }
+    setRunning(source.id);
+    try {
+      let results: QueryCandidate[];
+      if (source.needsUrls) {
+        const urls = competitorUrls.split(/\r?\n/).map((s) => s.trim()).filter(Boolean);
+        results = await GH.scrapeCompetitors(urls);
+      } else if (source.fn === 'scrapeReddit') {
+        results = await GH.scrapeReddit();
+      } else if (source.fn === 'scrapeMedicareGov') {
+        results = await GH.scrapeMedicareGov();
+      } else if (source.fn === 'scrapeEhealth') {
+        results = await GH.scrapeEhealth();
+      } else {
+        results = [];
+      }
+      const arr = Array.isArray(results) ? results : [];
+
+      // Run through intent classifier
+      const classified = classifyIntent(arr);
+      // Merge + dedup
+      const combined = [...queue, ...classified];
+      const deduped = deduplicateQueries(combined);
+      const added = deduped.length - queue.length;
+      setQueue(deduped);
+
+      appendLog({
+        source: source.label,
+        count: arr.length,
+        added,
+        ts: new Date().toISOString(),
+      });
+    } catch (err) {
+      console.error('[Scrape]', err);
+      appendLog({
+        source: source.label,
+        error: err instanceof Error ? err.message : String(err),
+        ts: new Date().toISOString(),
+      });
+    } finally {
+      setRunning(null);
+    }
+  };
+
+  const runAll = async () => {
+    for (const source of SCRAPE_SOURCES) {
+      await runScraper(source);
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      {!ghAvailable && (
+        <div
+          className="card p-3"
+          style={{
+            background: 'rgba(239,68,68,0.08)',
+            borderColor: 'rgba(239,68,68,0.3)',
+          }}
+        >
+          <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+            <AlertTriangle size={16} style={{ color: '#f87171', flexShrink: 0 }} />
+            <div>
+              <div style={{ fontSize: 13, fontWeight: 600, color: '#fca5a5' }}>
+                window.GHScrapers not loaded
+              </div>
+              <div style={{ fontSize: 11, color: 'var(--gh-text-muted)', marginTop: 2 }}>
+                Check the browser console. The scraper IIFE at /gh-scrapers.js should run
+                before React mounts.
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className="card p-4">
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            marginBottom: 14,
+          }}
+        >
+          <div>
+            <h3 style={{ margin: 0, fontSize: 14, fontWeight: 700, color: '#fff' }}>
+              Scrape Sources
+            </h3>
+            <p style={{ fontSize: 11, color: 'var(--gh-text-muted)', marginTop: 2 }}>
+              Results are classified, deduped, and merged into the queue automatically.
+            </p>
+          </div>
+          <button
+            onClick={runAll}
+            disabled={!ghAvailable || !!running}
+            style={{
+              ...primaryBtnStyle,
+              padding: '10px 16px',
+              opacity: !ghAvailable || running ? 0.4 : 1,
+              cursor: !ghAvailable || running ? 'not-allowed' : 'pointer',
+            }}
+          >
+            <Play size={13} style={{ marginRight: 6 }} />
+            Run All
+          </button>
+        </div>
+
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit,minmax(260px,1fr))',
+            gap: 10,
+          }}
+        >
+          {SCRAPE_SOURCES.map((source) => {
+            const SourceIcon = source.Icon;
+            return (
+              <div
+                key={source.id}
+                style={{
+                  padding: 14,
+                  borderRadius: 10,
+                  background: 'rgba(255,255,255,0.03)',
+                  border: '1px solid rgba(255,255,255,0.08)',
+                }}
+              >
+                <div
+                  style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}
+                >
+                  <SourceIcon size={14} style={{ color: '#60a5fa' }} />
+                  <strong style={{ fontSize: 13, color: '#fff' }}>{source.label}</strong>
+                </div>
+                <p
+                  style={{
+                    fontSize: 11,
+                    color: 'var(--gh-text-muted)',
+                    marginBottom: 10,
+                    minHeight: 30,
+                  }}
+                >
+                  {source.desc}
+                </p>
+                {source.needsUrls && (
+                  <textarea
+                    value={competitorUrls}
+                    onChange={(e) => setCompetitorUrls(e.target.value)}
+                    rows={3}
+                    style={{ width: '100%', fontSize: 11, marginBottom: 8 }}
+                    placeholder="One URL per line"
+                  />
+                )}
+                <button
+                  onClick={() => runScraper(source)}
+                  disabled={!ghAvailable || !!running}
+                  style={{
+                    ...secondaryBtnStyle,
+                    width: '100%',
+                    justifyContent: 'center',
+                    opacity: !ghAvailable || running ? 0.4 : 1,
+                  }}
+                >
+                  {running === source.id ? (
+                    <span
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
+                    >
+                      <Loader2 size={12} className="gh-spin" />
+                      Running…
+                    </span>
+                  ) : (
+                    <>
+                      <Download size={12} style={{ marginRight: 6 }} />
+                      Run {source.label}
+                    </>
+                  )}
+                </button>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {log.length > 0 && (
+        <div className="card p-4">
+          <h3
+            style={{
+              margin: '0 0 10px',
+              fontSize: 12,
+              fontWeight: 700,
+              color: 'var(--gh-text-muted)',
+              letterSpacing: '0.08em',
+              textTransform: 'uppercase',
+            }}
+          >
+            Recent Runs
+          </h3>
+          <div style={{ fontFamily: 'ui-monospace,monospace', fontSize: 11 }}>
+            {log.map((e, i) => (
+              <div
+                key={i}
+                style={{
+                  display: 'flex',
+                  gap: 8,
+                  padding: '4px 0',
+                  borderBottom: '1px solid rgba(255,255,255,0.04)',
+                }}
+              >
+                <span style={{ color: '#6b7280', minWidth: 70 }}>{e.ts.slice(11, 19)}</span>
+                <span style={{ color: '#60a5fa', minWidth: 90 }}>{e.source}</span>
+                {e.error ? (
+                  <span style={{ color: '#fca5a5' }}>✗ {e.error}</span>
+                ) : (
+                  <span style={{ color: '#4ade80' }}>
+                    ✓ {e.count} queries
+                    {e.added != null && ` (+${e.added} after dedup)`}
+                  </span>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// SettingsTab
+// ═══════════════════════════════════════════════════════════════════════════
+
+interface SettingsTabProps {
+  apiKeys: APIKeys;
+  setApiKeys: Dispatch<SetStateAction<APIKeys>>;
+}
+
+const PROVIDERS: Array<{
+  key: keyof APIKeys;
+  label: string;
+  placeholder: string;
+  docs: string;
+}> = [
+  {
+    key: 'claude',
+    label: 'Claude (Anthropic)',
+    placeholder: 'sk-ant-...',
+    docs: 'https://console.anthropic.com/',
+  },
+  {
+    key: 'chatgpt',
+    label: 'ChatGPT (OpenAI)',
+    placeholder: 'sk-...',
+    docs: 'https://platform.openai.com/api-keys',
+  },
+  {
+    key: 'perplexity',
+    label: 'Perplexity',
+    placeholder: 'pplx-...',
+    docs: 'https://www.perplexity.ai/settings/api',
+  },
+  {
+    key: 'gemini',
+    label: 'Gemini (Google)',
+    placeholder: 'AIza...',
+    docs: 'https://aistudio.google.com/apikey',
+  },
+];
+
+function SettingsTab({ apiKeys, setApiKeys }: SettingsTabProps) {
+  const [local, setLocal] = useState<APIKeys>(apiKeys);
+  const [saved, setSaved] = useState(false);
+  const [revealed, setRevealed] = useState<Record<string, boolean>>({});
+
+  useEffect(() => {
+    setLocal(apiKeys);
+  }, [apiKeys]);
+
+  const handleSave = () => {
+    saveAllKeys(local);
+    setApiKeys(local);
+    setSaved(true);
+    setTimeout(() => setSaved(false), 2000);
+  };
+
+  const handleClear = (key: keyof APIKeys) => {
+    const next = { ...local, [key]: '' };
+    setLocal(next);
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="card p-4">
+        <div style={{ marginBottom: 14 }}>
+          <h3 style={{ margin: 0, fontSize: 14, fontWeight: 700, color: '#fff' }}>
+            LLM API Keys
+          </h3>
+          <p style={{ fontSize: 11, color: 'var(--gh-text-muted)', marginTop: 2 }}>
+            Stored locally in{' '}
+            <code
+              style={{
+                fontSize: 10,
+                background: 'rgba(255,255,255,0.06)',
+                padding: '1px 5px',
+                borderRadius: 3,
+              }}
+            >
+              gh-cc-cm-apikeys
+            </code>
+            . Keys never leave the browser except as outbound API calls.
+          </p>
+        </div>
+
+        <div style={{ display: 'grid', gap: 14 }}>
+          {PROVIDERS.map((p) => {
+            const value = local[p.key] || '';
+            const hasKey = !!value;
+            const show = !!revealed[p.key];
+            return (
+              <div key={p.key}>
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    marginBottom: 6,
+                  }}
+                >
+                  <label style={{ fontSize: 12, fontWeight: 600, color: '#e5e7eb' }}>
+                    {p.label}
+                    {hasKey && (
+                      <span
+                        style={{
+                          fontSize: 9,
+                          marginLeft: 6,
+                          padding: '1px 5px',
+                          borderRadius: 3,
+                          background: 'rgba(74,222,128,0.15)',
+                          color: '#4ade80',
+                          fontWeight: 700,
+                        }}
+                      >
+                        SET
+                      </span>
+                    )}
+                  </label>
+                  <a
+                    href={p.docs}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{ fontSize: 10, color: '#60a5fa', textDecoration: 'none' }}
+                  >
+                    Get key ↗
+                  </a>
+                </div>
+                <div style={{ display: 'flex', gap: 6 }}>
+                  <input
+                    type={show ? 'text' : 'password'}
+                    value={value}
+                    onChange={(e) => setLocal({ ...local, [p.key]: e.target.value })}
+                    placeholder={p.placeholder}
+                    style={{ flex: 1, fontFamily: 'ui-monospace,monospace' }}
+                  />
+                  <button
+                    onClick={() => setRevealed((r) => ({ ...r, [p.key]: !r[p.key] }))}
+                    style={{ ...secondaryBtnStyle, padding: '8px 10px' }}
+                    aria-label={show ? 'Hide' : 'Show'}
+                  >
+                    {show ? <EyeOff size={14} /> : <Eye size={14} />}
+                  </button>
+                  {hasKey && (
+                    <button
+                      onClick={() => handleClear(p.key)}
+                      style={{ ...secondaryBtnStyle, padding: '8px 10px', color: '#fca5a5' }}
+                    >
+                      <X size={14} />
+                    </button>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 10,
+            marginTop: 18,
+            paddingTop: 14,
+            borderTop: '1px solid rgba(255,255,255,0.06)',
+          }}
+        >
+          <button onClick={handleSave} style={primaryBtnStyle}>
+            <Save size={13} style={{ marginRight: 6 }} />
+            Save Keys
+          </button>
+          {saved && (
+            <span
+              style={{
+                fontSize: 12,
+                color: '#4ade80',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 4,
+              }}
+            >
+              <Check size={13} />
+              Saved
+            </span>
+          )}
+        </div>
+      </div>
+
+      <div className="card p-4">
+        <h3
+          style={{
+            margin: '0 0 10px',
+            fontSize: 12,
+            fontWeight: 700,
+            color: 'var(--gh-text-muted)',
+            letterSpacing: '0.08em',
+            textTransform: 'uppercase',
+          }}
+        >
+          Storage
+        </h3>
+        <div style={{ fontSize: 11, color: 'var(--gh-text-soft)', lineHeight: 1.6 }}>
+          <div>
+            Queue: <code style={{ color: '#60a5fa' }}>gh-cc-query-queue-v3</code>
+          </div>
+          <div>
+            Keys: <code style={{ color: '#60a5fa' }}>gh-cc-cm-apikeys</code>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Top-level: CitationMonitorPanel with 4 tabs
+// ═══════════════════════════════════════════════════════════════════════════
+
+type TabId = 'queue' | 'generate' | 'scrape' | 'settings';
+
+const TABS: Array<{ id: TabId; label: string; Icon: typeof List }> = [
+  { id: 'queue', label: 'Queue', Icon: List },
+  { id: 'generate', label: 'Generate', Icon: Sparkles },
+  { id: 'scrape', label: 'Scrape', Icon: DownloadCloud },
+  { id: 'settings', label: 'Settings', Icon: Settings },
+];
+
+export default function CitationMonitorPanel() {
+  const [activeTab, setActiveTab] = useState<TabId>('queue');
+  const [queue, setQueueState] = useState<QueryCandidate[]>(() => loadQueueFromLS());
+  const [apiKeys, setApiKeys] = useState<APIKeys>(() => loadAllKeys());
+
+  // Persist queue on every mutation
+  const setQueue = useCallback(
+    (updater: QueryCandidate[] | ((prev: QueryCandidate[]) => QueryCandidate[])) => {
+      setQueueState((prev) => {
+        const next = typeof updater === 'function' ? updater(prev) : updater;
+        saveQueueToLS(next);
+        return next;
+      });
+    },
+    []
+  );
+
+  const queueCount = queue.length;
+
+  return (
+    <div style={{ maxWidth: 1200, margin: '0 auto', padding: '24px 20px 60px' }}>
+      {/* Header */}
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          marginBottom: 20,
+          flexWrap: 'wrap',
+          gap: 12,
+        }}
+      >
+        <div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div
+              style={{
+                width: 32,
+                height: 32,
+                borderRadius: 8,
+                background: 'linear-gradient(135deg,#0071e3,#2563eb)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <Activity size={18} style={{ color: '#fff' }} />
+            </div>
+            <h1 style={{ margin: 0, fontSize: 22, fontWeight: 800, color: '#fff' }}>
+              Citation Monitor
+            </h1>
+            <span
+              style={{
+                fontSize: 10,
+                fontWeight: 800,
+                padding: '3px 8px',
+                borderRadius: 4,
+                background: 'rgba(20,184,166,0.15)',
+                color: '#2dd4bf',
+                letterSpacing: '0.1em',
+              }}
+            >
+              AEO 3.0
+            </span>
+          </div>
+          <p style={{ fontSize: 12, color: 'var(--gh-text-muted)', marginTop: 6 }}>
+            Track GenerationHealth.me citations across Claude, ChatGPT, Perplexity, and
+            Gemini.
+          </p>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div
+            style={{
+              padding: '8px 14px',
+              borderRadius: 10,
+              background: 'rgba(255,255,255,0.03)',
+              border: '1px solid var(--gh-border)',
+            }}
+          >
+            <div
+              style={{
+                fontSize: 9,
+                fontWeight: 700,
+                color: 'var(--gh-text-muted)',
+                letterSpacing: '0.08em',
+                textTransform: 'uppercase',
+              }}
+            >
+              Queue
+            </div>
+            <div
+              style={{
+                fontSize: 18,
+                fontWeight: 800,
+                color: '#fff',
+                fontVariantNumeric: 'tabular-nums',
+              }}
+            >
+              {queueCount}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Tabs */}
+      <div
+        style={{
+          display: 'flex',
+          gap: 4,
+          marginBottom: 20,
+          borderBottom: '1px solid var(--gh-border)',
+        }}
+      >
+        {TABS.map((tab) => {
+          const active = activeTab === tab.id;
+          const TabIcon = tab.Icon;
+          return (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 8,
+                padding: '12px 18px',
+                border: 'none',
+                background: 'transparent',
+                color: active ? '#fff' : 'var(--gh-text-muted)',
+                fontSize: 13,
+                fontWeight: active ? 700 : 500,
+                cursor: 'pointer',
+                borderBottom: active ? '2px solid #0071e3' : '2px solid transparent',
+                marginBottom: -1,
+                transition: 'all 150ms',
+              }}
+            >
+              <TabIcon size={15} />
+              {tab.label}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Tab content */}
+      {activeTab === 'queue' && (
+        <QueueTab queue={queue} setQueue={setQueue} apiKeys={apiKeys} />
+      )}
+      {activeTab === 'generate' && <GenerateTab queue={queue} setQueue={setQueue} />}
+      {activeTab === 'scrape' && <ScrapeTab queue={queue} setQueue={setQueue} />}
+      {activeTab === 'settings' && (
+        <SettingsTab apiKeys={apiKeys} setApiKeys={setApiKeys} />
       )}
     </div>
   );
