@@ -1,4 +1,18 @@
-// GH Master Template v5.7.2 — THE LAW
+// GH Master Template v5.7.3 — THE LAW
+// v5.7.3 CHANGE: CSS content escape sequences eliminated.
+// All visual characters (arrows, pins, quotes) previously injected via
+// CSS ::before pseudo-elements with \XXXX escape sequences are now baked
+// directly into HTML markup as <span aria-hidden="true"> elements.
+// This prevents Elementor from stripping or double-escaping the characters
+// on paste, which caused raw escape codes (e.g. \2192) to render as
+// visible text on live pages.
+//
+// Affected elements fixed:
+//   .gh-rlink      → &#x2192; span inside each <a>
+//   .gh-clink      → → span inside each <a> (was literal →, now baked in HTML)
+//   .gh-col-list li → &#x2192; span inside each <li>
+//   .gh-testimonial → &#x201C; span inside .gh-testimonial
+//
 // Claude fills placeholder values. assembleHTML does string replacement.
 // This template is NEVER modified. Only placeholder values change.
 
@@ -29,6 +43,38 @@ export const MASTER_TEMPLATE = `<!DOCTYPE html>
      
      This controls: Schema, CTAs, NEPQ section, Related Guides,
      County Grid, Author Card, Footer disclaimer
+     ═══════════════════════════════════════════════════════════ -->
+
+<!-- ═══════════════════════════════════════════════════════════
+     67-POINT SCAN — RULE ADDITION v5.7.3
+     ───────────────────────────────────────────────────────────
+     SCAN RULE: CSS CONTENT ESCAPE BLOCKER (Publish Blocker)
+     
+     Before Copy HTML, the scan must flag ANY occurrence of the
+     pattern:  content:"\\ or content:'\\ in any <style> block.
+     
+     These are Unicode escape sequences (e.g. \\2192, \\1F4CD,
+     \\201C) that Elementor strips or double-escapes on paste,
+     causing raw escape codes to render as visible text on the
+     live page (e.g. \\2192 appearing before links instead of →).
+     
+     THE FIX APPLIED IN v5.7.3:
+     All visual characters previously injected via CSS ::before
+     pseudo-elements are now baked directly into the HTML markup
+     as <span aria-hidden="true"> elements with real Unicode
+     characters or HTML entities. The CSS rules now use
+     content:none to suppress any pseudo-element output.
+     
+     WHAT THIS RULE CHECKS:
+     Regex:  content\\s*:\\s*["']\\\\ 
+     If found anywhere in a <style> block → PUBLISH BLOCKED.
+     Correct pattern is content:none or content:"" only.
+     
+     AFFECTED ELEMENTS (all fixed in this version):
+     - .gh-rlink  → &#x2192; span inside each <a>
+     - .gh-clink  → 📍 span inside each <a>  
+     - .gh-col-list li → &#x2192; span inside each <li>
+     - .gh-testimonial → &#x201C; span inside .gh-testimonial
      ═══════════════════════════════════════════════════════════ -->
 <html lang="en">
 <head>
@@ -639,7 +685,7 @@ article li::before{content:'';position:absolute;left:0;top:10px;width:8px;height
 .gh-col-list{list-style:none;margin:0 !important;padding:0 !important;}
 .gh-col-list li{padding:7px 0 7px 20px !important;position:relative;border-bottom:1px solid rgba(0,0,0,.05);font-size:13px !important;line-height:1.6 !important;color:var(--charcoal) !important;}
 .gh-col-list li:last-child{border-bottom:none;}
-.gh-col-list li::before{content:"\\2192" !important;position:absolute;left:0;color:var(--carolina);font-size:12px;top:8px !important;width:auto !important;height:auto !important;background:none !important;border-radius:0 !important;}
+.gh-col-list li::before{content:none !important;}.gh-col-list-arrow{position:absolute;left:0;top:8px;color:var(--carolina);font-size:12px;line-height:1;pointer-events:none;}
 
 
 /* ════════════════════════
@@ -693,7 +739,7 @@ article li::before{content:'';position:absolute;left:0;top:10px;width:8px;height
    TESTIMONIAL
    ════════════════════════ */
 .gh-testimonial{background:var(--white);border:1.5px solid rgba(0,0,0,.08);border-radius:var(--r-xl);padding:36px;margin:48px 0;max-width:var(--prose);box-shadow:var(--sh-md);position:relative;}
-.gh-testimonial::before{content:'\\201C';position:absolute;top:-8px;left:24px;font-size:72px;color:var(--carolina);opacity:.2;font-family:Georgia,serif;line-height:1;}
+.gh-testimonial::before{content:none;}.gh-testimonial-quote{position:absolute;top:-8px;left:24px;font-size:72px;color:var(--carolina);opacity:.2;font-family:Georgia,serif;line-height:1;pointer-events:none;}
 .gh-testimonial blockquote{font-style:italic;font-size:16px;line-height:1.75;color:var(--charcoal);margin-bottom:16px;}
 .gh-testimonial-author{font-size:14px;font-weight:600;color:var(--slate);}
 .gh-testimonial-link{margin-top:12px;font-size:14px;}
@@ -749,13 +795,13 @@ article li::before{content:'';position:absolute;left:0;top:10px;width:8px;height
 .gh-related>h3{font-family:var(--font-display);font-size:22px;font-weight:600;color:var(--midnight);margin:0 0 24px;}
 .gh-related-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px;}
 .gh-rlink{display:flex;align-items:center;gap:7px;padding:10px 14px;background:var(--white);border:1px solid rgba(0,0,0,.06);border-radius:var(--r-md);font-size:14px;font-weight:500;color:var(--charcoal);text-decoration:none;transition:all 180ms var(--ease);}
-.gh-rlink::before{content:"\\2192";color:var(--carolina);font-size:12px;flex-shrink:0;}
+.gh-rlink::before{content:none;}.gh-rlink-arrow{color:var(--carolina);font-size:12px;flex-shrink:0;}
 .gh-rlink:hover{color:var(--carolina);border-color:var(--carolina);}
 .gh-county-hd{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--carolina);margin:24px 0 12px;padding-top:24px;border-top:1px solid var(--mist);}
 .gh-county-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;}
 .gh-clink{display:flex;align-items:center;gap:5px;padding:9px 12px;background:var(--white);border:1px solid rgba(0,0,0,.06);border-radius:var(--r-md);font-size:13px;font-weight:600;color:var(--carolina);text-decoration:none;transition:all 180ms var(--ease);}
 .gh-clink:hover{background:var(--blue-50);border-color:var(--carolina);}
-.gh-clink::before{content:"→";font-size:12px;margin-right:4px;}
+.gh-clink::before{content:none;}.gh-clink-pin{font-size:10px;}
 
 
 /* ════════════════════════
@@ -2256,21 +2302,21 @@ article li::before{content:'';position:absolute;left:0;top:10px;width:8px;height
     <div class="gh-col-card">
       <h4>[COL CARD 1 TITLE]</h4>
       <ul class="gh-col-list">
-        <li>[ITEM 1]</li>
-        <li>[ITEM 2]</li>
-        <li>[ITEM 3]</li>
-        <li>[ITEM 4]</li>
-        <li>[ITEM 5]</li>
+        <li><span class="gh-col-list-arrow" aria-hidden="true">&#x2192;</span>[ITEM 1]</li>
+        <li><span class="gh-col-list-arrow" aria-hidden="true">&#x2192;</span>[ITEM 2]</li>
+        <li><span class="gh-col-list-arrow" aria-hidden="true">&#x2192;</span>[ITEM 3]</li>
+        <li><span class="gh-col-list-arrow" aria-hidden="true">&#x2192;</span>[ITEM 4]</li>
+        <li><span class="gh-col-list-arrow" aria-hidden="true">&#x2192;</span>[ITEM 5]</li>
       </ul>
     </div>
     <div class="gh-col-card">
       <h4>[COL CARD 2 TITLE]</h4>
       <ul class="gh-col-list">
-        <li>[ITEM 1]</li>
-        <li>[ITEM 2]</li>
-        <li>[ITEM 3]</li>
-        <li>[ITEM 4]</li>
-        <li>[ITEM 5]</li>
+        <li><span class="gh-col-list-arrow" aria-hidden="true">&#x2192;</span>[ITEM 1]</li>
+        <li><span class="gh-col-list-arrow" aria-hidden="true">&#x2192;</span>[ITEM 2]</li>
+        <li><span class="gh-col-list-arrow" aria-hidden="true">&#x2192;</span>[ITEM 3]</li>
+        <li><span class="gh-col-list-arrow" aria-hidden="true">&#x2192;</span>[ITEM 4]</li>
+        <li><span class="gh-col-list-arrow" aria-hidden="true">&#x2192;</span>[ITEM 5]</li>
       </ul>
     </div>
   </div>
@@ -2380,6 +2426,7 @@ article li::before{content:'';position:absolute;left:0;top:10px;width:8px;height
        Pull from Google reviews. Real quotes only.
        ───────────────────────────────────────────── -->
   <div class="gh-testimonial">
+    <span class="gh-testimonial-quote" aria-hidden="true">&#x201C;</span>
     <blockquote>[TESTIMONIAL QUOTE — pulled from Google review. Attribute to county, not full name.]</blockquote>
     <div class="gh-testimonial-author">&mdash; [FIRST NAME OR INITIALS], [COUNTY] County Resident</div>
     <div class="gh-testimonial-link"><a href="https://www.google.com/maps/place/GenerationHealth" target="_blank" rel="noopener">Read all 20+ five-star reviews on Google &rarr;</a></div>
@@ -2602,14 +2649,14 @@ article li::before{content:'';position:absolute;left:0;top:10px;width:8px;height
              7. /lost-job-health-insurance-north-carolina/ (Lost Job NC)
              8. /best-health-insurance-plans-north-carolina/ (Best Plans NC)
            ═══════════════════════════════════════════════════════════ -->
-      <a href="https://generationhealth.me/[RELATED-SLUG-1]/" class="gh-rlink">[RELATED GUIDE 1]</a>
-      <a href="https://generationhealth.me/[RELATED-SLUG-2]/" class="gh-rlink">[RELATED GUIDE 2]</a>
-      <a href="https://generationhealth.me/[RELATED-SLUG-3]/" class="gh-rlink">[RELATED GUIDE 3]</a>
-      <a href="https://generationhealth.me/[RELATED-SLUG-4]/" class="gh-rlink">[RELATED GUIDE 4]</a>
-      <a href="https://generationhealth.me/[RELATED-SLUG-5]/" class="gh-rlink">[RELATED GUIDE 5]</a>
-      <a href="https://generationhealth.me/[RELATED-SLUG-6]/" class="gh-rlink">[RELATED GUIDE 6]</a>
-      <a href="https://generationhealth.me/[RELATED-SLUG-7]/" class="gh-rlink">[RELATED GUIDE 7]</a>
-      <a href="https://generationhealth.me/[RELATED-SLUG-8]/" class="gh-rlink">[RELATED GUIDE 8]</a>
+      <a href="https://generationhealth.me/[RELATED-SLUG-1]/" class="gh-rlink"><span class="gh-rlink-arrow" aria-hidden="true">&#x2192;</span>[RELATED GUIDE 1]</a>
+      <a href="https://generationhealth.me/[RELATED-SLUG-2]/" class="gh-rlink"><span class="gh-rlink-arrow" aria-hidden="true">&#x2192;</span>[RELATED GUIDE 2]</a>
+      <a href="https://generationhealth.me/[RELATED-SLUG-3]/" class="gh-rlink"><span class="gh-rlink-arrow" aria-hidden="true">&#x2192;</span>[RELATED GUIDE 3]</a>
+      <a href="https://generationhealth.me/[RELATED-SLUG-4]/" class="gh-rlink"><span class="gh-rlink-arrow" aria-hidden="true">&#x2192;</span>[RELATED GUIDE 4]</a>
+      <a href="https://generationhealth.me/[RELATED-SLUG-5]/" class="gh-rlink"><span class="gh-rlink-arrow" aria-hidden="true">&#x2192;</span>[RELATED GUIDE 5]</a>
+      <a href="https://generationhealth.me/[RELATED-SLUG-6]/" class="gh-rlink"><span class="gh-rlink-arrow" aria-hidden="true">&#x2192;</span>[RELATED GUIDE 6]</a>
+      <a href="https://generationhealth.me/[RELATED-SLUG-7]/" class="gh-rlink"><span class="gh-rlink-arrow" aria-hidden="true">&#x2192;</span>[RELATED GUIDE 7]</a>
+      <a href="https://generationhealth.me/[RELATED-SLUG-8]/" class="gh-rlink"><span class="gh-rlink-arrow" aria-hidden="true">&#x2192;</span>[RELATED GUIDE 8]</a>
     </div>
     <div class="gh-county-hd">Get Help by NC County</div>
     <div class="gh-county-grid">
@@ -2619,14 +2666,14 @@ article li::before{content:'';position:absolute;left:0;top:10px;width:8px;height
            NOTE: ACA county pages not yet built — use pillar link for now
            ═══════════════════════════════════════════════════════════ -->
       <!-- MEDICARE county grid -->
-      <a href="https://generationhealth.me/[MEDICARE: medicare-agents-in-durham-county-nc | ACA: north-carolina-aca-health-insurance-plans]/" class="gh-clink">Durham</a>
-      <a href="https://generationhealth.me/[MEDICARE: medicare-agents-in-wake-county-nc | ACA: north-carolina-aca-health-insurance-plans]/" class="gh-clink">Wake</a>
-      <a href="https://generationhealth.me/[MEDICARE: medicare-agents-in-mecklenburg-county-nc | ACA: north-carolina-aca-health-insurance-plans]/" class="gh-clink">Mecklenburg</a>
-      <a href="https://generationhealth.me/[MEDICARE: medicare-agents-in-guilford-county-nc | ACA: north-carolina-aca-health-insurance-plans]/" class="gh-clink">Guilford</a>
-      <a href="https://generationhealth.me/[MEDICARE: medicare-agents-in-forsyth-county-nc | ACA: north-carolina-aca-health-insurance-plans]/" class="gh-clink">Forsyth</a>
-      <a href="https://generationhealth.me/[MEDICARE: medicare-agents-in-buncombe-county-nc | ACA: north-carolina-aca-health-insurance-plans]/" class="gh-clink">Buncombe</a>
-      <a href="https://generationhealth.me/[MEDICARE: medicare-agents-in-orange-county-nc | ACA: north-carolina-aca-health-insurance-plans]/" class="gh-clink">Orange</a>
-      <a href="https://generationhealth.me/[MEDICARE: medicare-nc | ACA: north-carolina-aca-health-insurance-plans]/" class="gh-clink">All NC Counties</a>
+      <a href="https://generationhealth.me/[MEDICARE: medicare-agents-in-durham-county-nc | ACA: north-carolina-aca-health-insurance-plans]/" class="gh-clink"><span class="gh-clink-pin" aria-hidden="true">📍</span>Durham</a>
+      <a href="https://generationhealth.me/[MEDICARE: medicare-agents-in-wake-county-nc | ACA: north-carolina-aca-health-insurance-plans]/" class="gh-clink"><span class="gh-clink-pin" aria-hidden="true">📍</span>Wake</a>
+      <a href="https://generationhealth.me/[MEDICARE: medicare-agents-in-mecklenburg-county-nc | ACA: north-carolina-aca-health-insurance-plans]/" class="gh-clink"><span class="gh-clink-pin" aria-hidden="true">📍</span>Mecklenburg</a>
+      <a href="https://generationhealth.me/[MEDICARE: medicare-agents-in-guilford-county-nc | ACA: north-carolina-aca-health-insurance-plans]/" class="gh-clink"><span class="gh-clink-pin" aria-hidden="true">📍</span>Guilford</a>
+      <a href="https://generationhealth.me/[MEDICARE: medicare-agents-in-forsyth-county-nc | ACA: north-carolina-aca-health-insurance-plans]/" class="gh-clink"><span class="gh-clink-pin" aria-hidden="true">📍</span>Forsyth</a>
+      <a href="https://generationhealth.me/[MEDICARE: medicare-agents-in-buncombe-county-nc | ACA: north-carolina-aca-health-insurance-plans]/" class="gh-clink"><span class="gh-clink-pin" aria-hidden="true">📍</span>Buncombe</a>
+      <a href="https://generationhealth.me/[MEDICARE: medicare-agents-in-orange-county-nc | ACA: north-carolina-aca-health-insurance-plans]/" class="gh-clink"><span class="gh-clink-pin" aria-hidden="true">📍</span>Orange</a>
+      <a href="https://generationhealth.me/[MEDICARE: medicare-nc | ACA: north-carolina-aca-health-insurance-plans]/" class="gh-clink"><span class="gh-clink-pin" aria-hidden="true">📍</span>All NC Counties</a>
     </div>
   </div>
 
