@@ -1,4 +1,6 @@
-@import "tailwindcss";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
 @layer base {
   body {
@@ -10,9 +12,9 @@
 
 @layer components {
   .card {
-    border-radius: 1rem;
-    border: 1px solid rgba(255,255,255,0.08);
-    background: rgba(255,255,255,0.03);
-    backdrop-filter: blur(8px);
+    @apply rounded-2xl border border-white/[0.08] bg-white/[0.03] backdrop-blur-sm;
+  }
+  .card-hover {
+    @apply hover:bg-white/[0.06] transition-colors duration-200;
   }
 }
