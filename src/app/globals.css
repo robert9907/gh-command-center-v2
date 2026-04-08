@@ -2,11 +2,9 @@
 @tailwind components;
 @tailwind utilities;
 
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;0,9..40,800;1,9..40,400&family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&display=swap');
-
 @layer base {
   body {
-    @apply font-body antialiased;
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', sans-serif;
     background: linear-gradient(175deg, #0F1A2E 0%, #162033 40%, #1A2840 100%);
     min-height: 100vh;
   }
@@ -16,157 +14,7 @@
   .card {
     @apply rounded-2xl border border-white/[0.08] bg-white/[0.03] backdrop-blur-sm;
   }
-
   .card-hover {
-    @apply card transition-all duration-300 hover:border-white/[0.14] hover:bg-white/[0.05];
+    @apply hover:bg-white/[0.06] transition-colors duration-200;
   }
-
-  .metric-green {
-    @apply text-emerald-400;
-  }
-
-  .metric-yellow {
-    @apply text-amber-400;
-  }
-
-  .metric-red {
-    @apply text-red-400;
-  }
-
-  .badge {
-    @apply inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold;
-  }
-
-  .badge-green {
-    @apply badge bg-emerald-500/10 text-emerald-400 border border-emerald-500/20;
-  }
-
-  .badge-yellow {
-    @apply badge bg-amber-500/10 text-amber-400 border border-amber-500/20;
-  }
-
-  .badge-red {
-    @apply badge bg-red-500/10 text-red-400 border border-red-500/20;
-  }
-
-  .badge-blue {
-    @apply badge bg-carolina/10 text-carolina border border-carolina/20;
-  }
-
-  .nav-tab {
-    @apply px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-200 cursor-pointer;
-  }
-
-  .nav-tab-active {
-    @apply nav-tab bg-white/[0.12] text-white;
-  }
-
-  .nav-tab-inactive {
-    @apply nav-tab text-gh-text-muted hover:text-gh-text-soft hover:bg-white/[0.06];
-  }
-}
-
-/* Recharts custom styling */
-.recharts-cartesian-grid-horizontal line,
-.recharts-cartesian-grid-vertical line {
-  stroke: rgba(255, 255, 255, 0.06);
-}
-
-.recharts-text {
-  fill: #6B7B8D;
-  font-size: 11px;
-}
-
-/* Custom scrollbar */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 3px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.2);
-}
-
-/* Fade-in animation for dashboard cards */
-@keyframes fadeInUp {
-  from {
-    opacity: 0;
-    transform: translateY(12px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.animate-fade-in-up {
-  animation: fadeInUp 0.5s ease-out forwards;
-}
-
-.animate-delay-1 { animation-delay: 0.05s; }
-.animate-delay-2 { animation-delay: 0.1s; }
-.animate-delay-3 { animation-delay: 0.15s; }
-.animate-delay-4 { animation-delay: 0.2s; }
-.animate-delay-5 { animation-delay: 0.25s; }
-.animate-delay-6 { animation-delay: 0.3s; }
-
-/* AnimCheck pulse animation */
-@keyframes donePulse {
-  0% { background: rgba(74, 222, 128, 0.15); transform: scale(1); }
-  50% { background: rgba(74, 222, 128, 0.25); transform: scale(1.02); }
-  100% { background: transparent; transform: scale(1); }
-}
-
-/* Light mode overrides */
-body.light {
-  background: linear-gradient(175deg, #E8EDF3 0%, #EDF1F5 40%, #F2F5F8 100%) !important;
-  color: #2D3748;
-}
-body.light .card {
-  @apply bg-white/80 border-black/[0.08];
-  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
-}
-body.light .nav-tab-active {
-  @apply bg-black/[0.08] text-gray-900;
-}
-body.light .nav-tab-inactive {
-  @apply text-gray-500 hover:text-gray-700 hover:bg-black/[0.04];
-}
-body.light h1, body.light h2, body.light h3, body.light h4 {
-  color: #1A2332 !important;
-}
-body.light input, body.light textarea, body.light select {
-  color: #1A2332 !important;
-  border-color: rgba(0,0,0,0.12) !important;
-  background: rgba(0,0,0,0.02) !important;
-}
-body.light input::placeholder, body.light textarea::placeholder {
-  color: #718096 !important;
-}
-body.light .text-white { color: #1A2332 !important; }
-body.light .text-gh-text-body { color: #2D3748 !important; }
-body.light .text-gh-text-soft { color: #4A5568 !important; }
-body.light .text-gh-text-muted { color: #718096 !important; }
-body.light .text-gh-text-faint { color: #A0AEC0 !important; }
-body.light .border-white\/\[0\.08\] { border-color: rgba(0,0,0,0.08) !important; }
-body.light .border-white\/\[0\.06\] { border-color: rgba(0,0,0,0.06) !important; }
-body.light .border-white\/\[0\.04\] { border-color: rgba(0,0,0,0.04) !important; }
-body.light .bg-white\/\[0\.03\] { background: rgba(255,255,255,0.8) !important; }
-body.light .bg-white\/\[0\.04\] { background: rgba(0,0,0,0.03) !important; }
-body.light .bg-white\/\[0\.06\] { background: rgba(0,0,0,0.04) !important; }
-body.light .bg-white\/\[0\.02\] { background: rgba(0,0,0,0.02) !important; }
-body.light .bg-white\/\[0\.12\] { background: rgba(0,0,0,0.08) !important; }
-body.light header {
-  background: rgba(255,255,255,0.85) !important;
-  border-bottom-color: rgba(0,0,0,0.08) !important;
-  backdrop-filter: blur(12px);
 }
