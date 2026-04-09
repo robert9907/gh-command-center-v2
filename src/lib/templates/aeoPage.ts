@@ -43,7 +43,7 @@ a{text-decoration:none;}
 .gh-logo-div{width:1px;height:16px;background:#e5e5ea;}
 .gh-logo-name{font-size:14px;font-weight:600;color:#1d1d1f;}
 .gh-logo-sub{font-size:9px;color:#aeaeb2;text-transform:uppercase;letter-spacing:0.5px;}
-.gh-phone{font-size:15px;font-weight:600;color:#0071e3;}
+.gh-phone{font-size:14px;font-weight:600;color:#0071e3;background:#EFF6FF;padding:8px 16px;border-radius:100px;border:1.5px solid #0071e3;white-space:nowrap;}
 
 /* ── Hero ── */
 .hero{background:#0d2f5e;padding:60px 24px 56px;text-align:center;}
@@ -332,7 +332,11 @@ a{text-decoration:none;}
         <div class="pill-right-num">(828) 761-3326</div>
       </div>
     </div>
-    <p class="final-micro">No pressure &middot; No sales pitch &middot; Your data never sold</p>
+    <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-top:24px;">
+      <a href="https://www.sunfirematrix.com/app/consumer/medicareadvocates/10447418/#/" style="display:inline-flex;align-items:center;gap:8px;padding:12px 22px;background:rgba(255,255,255,0.1);border:1.5px solid rgba(255,255,255,0.25);border-radius:100px;color:#fff !important;font-size:14px;font-weight:600;text-decoration:none;">Compare Plans — SunFire</a>
+      <a href="https://www.healthsherpa.com/?_agent_id=robert-simm" style="display:inline-flex;align-items:center;gap:8px;padding:12px 22px;background:rgba(255,255,255,0.1);border:1.5px solid rgba(255,255,255,0.25);border-radius:100px;color:#fff !important;font-size:14px;font-weight:600;text-decoration:none;">ACA Plans — HealthSherpa</a>
+    </div>
+    <p class="final-micro" style="color:rgba(255,255,255,0.6) !important;">No pressure &middot; No sales pitch &middot; Your data never sold</p>
   </div>
 </div>
 
