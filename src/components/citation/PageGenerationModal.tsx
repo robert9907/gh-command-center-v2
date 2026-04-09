@@ -168,8 +168,8 @@ async function injectRelatedGuides(html: string, countySlug: string): Promise<st
     { url: 'https://generationhealth.me/medigap-plans-in-north-carolina-plan-g-vs-plan-n/', label: 'Medigap Plan G vs N' },
     { url: 'https://generationhealth.me/how-to-compare-medicare-advantage-plans-in-north-carolina/', label: 'Compare Medicare Advantage Plans' },
     { url: 'https://generationhealth.me/medicare-costs-north-carolina-2026-complete-guide/', label: 'Medicare Costs NC 2026' },
-    { url: 'https://generationhealth.me/medicare-special-enrollment-periods-nc/', label: 'Medicare SEP Guide' },
-    { url: 'https://generationhealth.me/medicare-late-enrollment-penalties-nc/', label: 'Late Enrollment Penalty Guide' },
+    { url: 'https://generationhealth.me/medicare-special-enrollment-periods-north-carolina-2026/', label: 'Medicare SEP Guide' },
+    { url: 'https://generationhealth.me/medicare-late-enrollment-penalties-north-carolina-avoid/', label: 'Late Enrollment Penalty Guide' },
     { url: 'https://generationhealth.me/free-medicare-quotes-online/', label: 'Free Medicare Quotes Online' },
   ];
 
