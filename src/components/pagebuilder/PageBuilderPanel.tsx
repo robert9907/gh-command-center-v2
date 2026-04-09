@@ -303,17 +303,20 @@ export default function PageBuilderPanel() {
   return (
     <div className="flex flex-col" style={{ height: 'calc(100vh - 160px)', overflow: 'hidden' }}>
 
-      {/* ── TOP BAR ── */}
-      <div className="flex flex-wrap items-center justify-between gap-3 px-6 py-3 border-b border-white/[0.07] bg-[#0E0E12] flex-shrink-0">
-        <div>
-          <h2 className="font-display text-lg font-bold text-white flex items-center gap-2">
+      {/* ── TOP BAR ROW 1: Title + Mode buttons + API Key — all on one line, no wrap ── */}
+      <div className="flex items-center gap-2 px-4 py-2 border-b border-white/[0.07] bg-[#0E0E12] flex-shrink-0" style={{ minHeight: '48px' }}>
+        {/* Title block */}
+        <div className="flex-shrink-0 mr-2">
+          <div className="font-display text-sm font-bold text-white flex items-center gap-1.5">
             <span>📄</span> Page Builder
-          </h2>
-          <p className="text-[10px] text-gh-text-muted mt-0.5">
-            Template v5.7.2 · 69-point scanner · {TEMPLATE_PLACEHOLDERS.length} placeholders · Claude fills values
-          </p>
+          </div>
+          <div className="text-[9px] text-gh-text-muted leading-tight">
+            v5.7.2 · 69-pt · {TEMPLATE_PLACEHOLDERS.length} placeholders
+          </div>
         </div>
-        <div className="flex items-center gap-2 flex-wrap">
+
+        {/* Mode buttons — flex-shrink-0 so they never collapse */}
+        <div className="flex items-center gap-1 flex-shrink-0">
           {([
             { id: 'build' as Mode, label: '🚀 Build New' },
             { id: 'fix' as Mode, label: '🔧 Fix Existing' },
@@ -321,38 +324,41 @@ export default function PageBuilderPanel() {
             { id: 'cards' as Mode, label: '🃏 NEPQ Cards' },
           ]).map((m) => (
             <button key={m.id} onClick={() => setMode(m.id)}
-              className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${mode === m.id ? 'bg-white/[0.12] text-white' : 'bg-white/[0.04] text-gh-text-muted hover:bg-white/[0.06]'}`}>
+              className={`px-3 py-1.5 rounded-lg text-[11px] font-bold transition-all whitespace-nowrap flex-shrink-0 ${mode === m.id ? 'bg-white/[0.12] text-white' : 'bg-white/[0.04] text-gh-text-muted hover:bg-white/[0.06]'}`}>
               {m.label}
             </button>
           ))}
+        </div>
 
-          {/* API Key pill */}
-          <div ref={pillRef} className="relative">
-            <button onClick={() => { setApiDraft(apiKey); setApiPillOpen(!apiPillOpen); }}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold border transition-all"
-              style={{ background: apiKey ? 'rgba(13,148,136,0.12)' : 'rgba(255,255,255,0.04)', borderColor: apiKey ? 'rgba(13,148,136,0.35)' : 'rgba(255,255,255,0.1)', color: apiKey ? '#2DD4BF' : '#6B7B8D' }}>
-              <span className="w-1.5 h-1.5 rounded-full" style={{ background: apiKey ? '#34C759' : '#6B7280' }} />
-              API Key
-              <ChevronDown className="w-3 h-3 opacity-60" />
-            </button>
-            {apiPillOpen && (
-              <div className="absolute right-0 top-[calc(100%+6px)] z-50 w-72 rounded-xl border border-white/[0.12] bg-[#1A1A22] shadow-xl p-4 space-y-3">
-                <label className="text-[10px] font-bold text-gh-text-muted uppercase tracking-wider block">Claude API Key</label>
-                <input type="password" value={apiDraft} onChange={(e) => setApiDraft(e.target.value)} placeholder="sk-ant-api03-..."
-                  className="w-full px-3 py-2 rounded-lg border border-white/[0.12] bg-white/[0.04] text-white text-xs outline-none"
-                  autoFocus onKeyDown={(e) => { if (e.key === 'Enter') { saveApiKey(apiDraft); setApiPillOpen(false); } }} />
-                <button onClick={() => { saveApiKey(apiDraft); setApiPillOpen(false); }}
-                  className="w-full py-2 rounded-lg text-xs font-bold bg-teal-600 text-white hover:bg-teal-500">
-                  Save &amp; Hide
-                </button>
-              </div>
-            )}
-          </div>
+        {/* Spacer */}
+        <div className="flex-1" />
+
+        {/* API Key pill */}
+        <div ref={pillRef} className="relative flex-shrink-0">
+          <button onClick={() => { setApiDraft(apiKey); setApiPillOpen(!apiPillOpen); }}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-bold border transition-all whitespace-nowrap"
+            style={{ background: apiKey ? 'rgba(13,148,136,0.12)' : 'rgba(255,255,255,0.04)', borderColor: apiKey ? 'rgba(13,148,136,0.35)' : 'rgba(255,255,255,0.1)', color: apiKey ? '#2DD4BF' : '#6B7B8D' }}>
+            <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: apiKey ? '#34C759' : '#6B7280' }} />
+            API Key
+            <ChevronDown className="w-3 h-3 opacity-60" />
+          </button>
+          {apiPillOpen && (
+            <div className="absolute right-0 top-[calc(100%+6px)] z-50 w-72 rounded-xl border border-white/[0.12] bg-[#1A1A22] shadow-xl p-4 space-y-3">
+              <label className="text-[10px] font-bold text-gh-text-muted uppercase tracking-wider block">Claude API Key</label>
+              <input type="password" value={apiDraft} onChange={(e) => setApiDraft(e.target.value)} placeholder="sk-ant-api03-..."
+                className="w-full px-3 py-2 rounded-lg border border-white/[0.12] bg-white/[0.04] text-white text-xs outline-none"
+                autoFocus onKeyDown={(e) => { if (e.key === 'Enter') { saveApiKey(apiDraft); setApiPillOpen(false); } }} />
+              <button onClick={() => { saveApiKey(apiDraft); setApiPillOpen(false); }}
+                className="w-full py-2 rounded-lg text-xs font-bold bg-teal-600 text-white hover:bg-teal-500">
+                Save &amp; Hide
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
-      {/* ── PAGE TYPE + COPY FOR WORDPRESS ── */}
-      <div className="flex items-center gap-2 px-6 py-2.5 border-b border-white/[0.07] bg-[#0E0E12] flex-shrink-0 flex-wrap">
+      {/* ── TOP BAR ROW 2: Page type + Copy for WordPress ── */}
+      <div className="flex items-center gap-2 px-4 py-2 border-b border-white/[0.07] bg-[#0E0E12] flex-shrink-0">
         {([
           { id: 'medicare' as PageType, label: 'Medicare', color: '#4B9CD3' },
           { id: 'aca' as PageType, label: 'ACA', color: '#16A34A' },
@@ -360,17 +366,17 @@ export default function PageBuilderPanel() {
           { id: 'broker' as PageType, label: 'Broker', color: '#F97316' },
         ]).map((t) => (
           <button key={t.id} onClick={() => setPageType(t.id)}
-            className="px-3 py-1.5 rounded-lg text-[11px] font-bold transition-all"
+            className="px-3 py-1 rounded-lg text-[11px] font-bold transition-all flex-shrink-0"
             style={{ background: pageType === t.id ? `${t.color}25` : 'rgba(255,255,255,0.04)', color: pageType === t.id ? t.color : '#6B7B8D' }}>
             {t.label}
           </button>
         ))}
-        <div className="w-px h-5 bg-white/[0.1] mx-1" />
+        <div className="w-px h-4 bg-white/[0.1] mx-1 flex-shrink-0" />
         <button onClick={handleCopyWordPress} disabled={!generatedHtml && !scanHtml}
-          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-bold transition-all disabled:opacity-40 ${copied ? 'bg-emerald-500/20 border border-emerald-500/30 text-emerald-400' : 'bg-gradient-to-r from-teal-600/80 to-blue-600/80 text-white hover:from-teal-600 hover:to-blue-600'}`}>
-          {copied ? <><Check className="w-3 h-3" /> Copied — paste into Elementor</> : <><Copy className="w-3 h-3" /> Copy for WordPress</>}
+          className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-[11px] font-bold transition-all disabled:opacity-40 flex-shrink-0 ${copied ? 'bg-emerald-500/20 border border-emerald-500/30 text-emerald-400' : 'bg-gradient-to-r from-teal-600/80 to-blue-600/80 text-white hover:from-teal-600 hover:to-blue-600'}`}>
+          {copied ? <><Check className="w-3 h-3" /> Copied!</> : <><Copy className="w-3 h-3" /> Copy for WordPress</>}
         </button>
-        {buildError && <div className="ml-auto text-[10px] text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-1">{buildError}</div>}
+        {buildError && <div className="ml-auto text-[10px] text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-1 flex-shrink-0">{buildError}</div>}
       </div>
 
       {/* ── 3-PANEL BODY ── */}
@@ -478,7 +484,7 @@ export default function PageBuilderPanel() {
             </div>
           )}
 
-          {/* NEPQ Cards mode — full area */}
+          {/* NEPQ Cards mode */}
           {mode === 'cards' && (
             <div className="flex-1 overflow-y-auto p-4">
               <div className="text-[10px] font-bold text-gh-text-muted uppercase tracking-widest mb-3">
@@ -617,7 +623,7 @@ export default function PageBuilderPanel() {
 
           <div className="h-px bg-white/[0.07] flex-shrink-0" />
 
-          {/* NEPQ Cards header */}
+          {/* NEPQ Cards */}
           <div className="px-3 pt-2.5 pb-1.5 flex-shrink-0">
             <div className="text-[9px] font-bold text-gh-text-muted uppercase tracking-widest mb-2">NEPQ Cards</div>
             <div className="flex gap-1">
