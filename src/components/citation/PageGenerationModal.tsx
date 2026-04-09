@@ -9,11 +9,13 @@
 //   3. Render AEO page template via renderTemplate()
 //   4. Validate output against 11-rule validator
 //
-// On successful generation, calls onGenerated(updatedQuery) AND pushes an
-// entry into the AEO Pipeline tracker via useAppState.addToPipeline(),
-// so the page appears in Rob's existing pipeline tab.
+// After step 3: injectRelatedGuides() calls WordPress REST API to fetch
+// confirmed live posts from the Medicare FAQ category, selects 8 relevant
+// guides per county, and injects them into [RELATED-GUIDE-N] placeholders.
+// Also builds [COUNTY-PILLS] from confirmed live county pages.
 //
-// Ported from aeo3-integrated/index.html single-file Babel build.
+// On successful generation, calls onGenerated(updatedQuery) AND pushes an
+// entry into the AEO Pipeline tracker via useAppState.addToPipeline().
 // ═══════════════════════════════════════════════════════════════════════════
 
 import {
@@ -31,6 +33,181 @@ import { validate } from '@/lib/validator';
 import { extractCounty } from '@/lib/intentClassifier';
 import { AEO_PAGE_TEMPLATE } from '@/lib/templates/aeoPage';
 import { useAppState, type AeoPipelineEntry } from '@/lib/AppState';
+
+// ── WordPress REST API config ─────────────────────────────────────────────
+
+const WP_BASE = 'https://generationhealth.me/wp-json/wp/v2';
+
+// Confirmed live county pages — used to build [COUNTY-PILLS]
+// Key = county slug, Value = exact live URL
+const LIVE_COUNTY_URLS: Record<string, string> = {
+  wake:         'https://generationhealth.me/medicare-agents-in-wake-county-nc/',
+  orange:       'https://generationhealth.me/medicare-agents-in-orange-county-nc/',
+  durham:       'https://generationhealth.me/medicare-agents-in-durham-county-nc/',
+  forsyth:      'https://generationhealth.me/medicare-agents-in-forsyth-county-nc/',
+  buncombe:     'https://generationhealth.me/medicare-agents-in-buncombe-county-nc/',
+  guilford:     'https://generationhealth.me/medicare-agents-in-guilford-county-nc/',
+  mecklenburg:  'https://generationhealth.me/medicare-agents-in-mecklenburg-north-carolina/',
+};
+
+const COUNTY_DISPLAY_NAMES: Record<string, string> = {
+  wake:        'Wake',
+  orange:      'Orange',
+  durham:      'Durham',
+  forsyth:     'Forsyth',
+  buncombe:    'Buncombe',
+  guilford:    'Guilford',
+  mecklenburg: 'Mecklenburg',
+};
+
+// Keyword clusters for county-aware guide selection.
+// When generating a page for a county in a cluster, posts matching those
+// keywords get prioritized in the guide pills.
+const COUNTY_KEYWORD_CLUSTERS: Record<string, string[]> = {
+  durham:      ['duke', 'durham'],
+  wake:        ['wake', 'raleigh'],
+  guilford:    ['guilford', 'greensboro'],
+  forsyth:     ['forsyth', 'winston'],
+  buncombe:    ['buncombe', 'asheville'],
+  mecklenburg: ['mecklenburg', 'charlotte'],
+  orange:      ['orange', 'chapel-hill'],
+};
+
+// ── WordPress API helpers ─────────────────────────────────────────────────
+
+interface WPPost {
+  slug: string;
+  title: { rendered: string };
+  link: string;
+  categories: number[];
+}
+
+/**
+ * Fetch all published posts from the Medicare FAQ category.
+ * WordPress REST API is public for published content — no auth needed.
+ * Returns empty array on any network failure so generation never blocks.
+ */
+async function fetchMedicareFAQPosts(): Promise<WPPost[]> {
+  try {
+    // First get the Medicare FAQ category ID
+    const catRes = await fetch(`${WP_BASE}/categories?slug=medicare-faq&_fields=id`, {
+      signal: AbortSignal.timeout(8000),
+    });
+    if (!catRes.ok) return [];
+    const cats = await catRes.json();
+    if (!cats.length) return [];
+    const catId: number = cats[0].id;
+
+    // Fetch up to 100 published posts in that category
+    const postsRes = await fetch(
+      `${WP_BASE}/posts?categories=${catId}&status=publish&per_page=100&_fields=slug,title,link,categories`,
+      { signal: AbortSignal.timeout(8000) }
+    );
+    if (!postsRes.ok) return [];
+    return await postsRes.json();
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Score a post's relevance for a given county.
+ * Posts whose slug/title contains county keywords score higher.
+ */
+function scorePost(post: WPPost, countySlug: string): number {
+  const keywords = COUNTY_KEYWORD_CLUSTERS[countySlug] || [];
+  const text = `${post.slug} ${post.title.rendered}`.toLowerCase();
+  let score = 0;
+  for (const kw of keywords) {
+    if (text.includes(kw)) score += 10;
+  }
+  // Prefer general Medicare education content as backfill
+  const generalTerms = ['enrollment', 'costs', 'medigap', 'advantage', 'part-d', 'supplement', 'penalty', 'quotes'];
+  for (const term of generalTerms) {
+    if (post.slug.includes(term)) score += 1;
+  }
+  return score;
+}
+
+/**
+ * Select the best 8 guide posts for a county from the full post list.
+ * Prioritizes county-specific posts, then fills with high-value general content.
+ * Excludes the current page's own slug to avoid self-linking.
+ */
+function selectGuides(posts: WPPost[], countySlug: string): WPPost[] {
+  const currentSlug = `medicare-broker-${countySlug}-nc`;
+  const eligible = posts.filter(p => p.slug !== currentSlug && p.link);
+  const scored = eligible
+    .map(p => ({ post: p, score: scorePost(p, countySlug) }))
+    .sort((a, b) => b.score - a.score);
+  return scored.slice(0, 8).map(s => s.post);
+}
+
+/**
+ * Build the [COUNTY-PILLS] HTML — links for confirmed live counties,
+ * excluding the current county (no self-link).
+ */
+function buildCountyPills(currentCountySlug: string): string {
+  return Object.entries(LIVE_COUNTY_URLS)
+    .filter(([slug]) => slug !== currentCountySlug)
+    .map(([slug, url]) =>
+      `<a class="county-pill" href="${url}">${COUNTY_DISPLAY_NAMES[slug]}</a>`
+    )
+    .join('\n        ');
+}
+
+/**
+ * Main injection function. Replaces [RELATED-GUIDE-N] and [COUNTY-PILLS]
+ * placeholders with live WordPress content.
+ * Falls back to hardcoded confirmed URLs if the API call fails.
+ */
+async function injectRelatedGuides(html: string, countySlug: string): Promise<string> {
+  const FALLBACK_GUIDES = [
+    { url: 'https://generationhealth.me/medicare-enrollment-in-north-carolina-complete-guide-for-2026/', label: 'Medicare Enrollment in NC' },
+    { url: 'https://generationhealth.me/how-to-sign-up-for-medicare-parts-a-and-b/', label: 'How to Sign Up for Medicare' },
+    { url: 'https://generationhealth.me/medigap-plans-in-north-carolina-plan-g-vs-plan-n/', label: 'Medigap Plan G vs N' },
+    { url: 'https://generationhealth.me/how-to-compare-medicare-advantage-plans-in-north-carolina/', label: 'Compare Medicare Advantage Plans' },
+    { url: 'https://generationhealth.me/medicare-costs-north-carolina-2026-complete-guide/', label: 'Medicare Costs NC 2026' },
+    { url: 'https://generationhealth.me/medicare-special-enrollment-periods-nc/', label: 'Medicare SEP Guide' },
+    { url: 'https://generationhealth.me/medicare-late-enrollment-penalties-nc/', label: 'Late Enrollment Penalty Guide' },
+    { url: 'https://generationhealth.me/free-medicare-quotes-online/', label: 'Free Medicare Quotes Online' },
+  ];
+
+  let guides: Array<{ url: string; label: string }> = [];
+
+  // Try WordPress API first
+  const posts = await fetchMedicareFAQPosts();
+  if (posts.length >= 4) {
+    const selected = selectGuides(posts, countySlug);
+    if (selected.length >= 4) {
+      guides = selected.map(p => ({
+        url: p.link,
+        label: p.title.rendered.replace(/<[^>]+>/g, ''),
+      }));
+    }
+  }
+
+  // Fall back to hardcoded list if API returned too few results
+  if (guides.length < 8) {
+    guides = FALLBACK_GUIDES;
+  }
+
+  // Replace [RELATED-GUIDE-N] placeholders
+  let result = html;
+  for (let i = 0; i < 8; i++) {
+    const guide = guides[i];
+    const pill = guide
+      ? `<a class="guide-pill" href="${guide.url}">${guide.label}</a>`
+      : '';
+    result = result.replace(`[RELATED-GUIDE-${i + 1}]`, pill);
+  }
+
+  // Replace [COUNTY-PILLS]
+  const countyPillsHtml = buildCountyPills(countySlug);
+  result = result.replace('[COUNTY-PILLS]', countyPillsHtml);
+
+  return result;
+}
 
 // ── Inline style tables ───────────────────────────────────────────────────
 
@@ -205,18 +382,18 @@ export default function PageGenerationModal({
   const [validation, setValidation] = useState<ValidationState>({ errors: [], warnings: [] });
   const [errorMsg, setErrorMsg] = useState('');
   const [toast, setToast] = useState('');
+  const [guideCount, setGuideCount] = useState<number>(0);
 
   const countyList = useMemo(() => {
-    try {
-      return getCountyList();
-    } catch {
-      return [];
-    }
+    try { return getCountyList(); } catch { return []; }
   }, []);
+
   const activeCounty = detectedCounty || manualCounty;
 
   const runPipeline = async (countyName: string) => {
     setErrorMsg('');
+
+    // Step 2: Load county data
     setLoadStep('running');
     let data: CountyData | null = null;
     try {
@@ -231,11 +408,25 @@ export default function PageGenerationModal({
       return;
     }
 
+    // Step 3: Generate + inject
     setGenerateStep('running');
     let html = '';
     try {
+      const countySlug = countyNameToSlug(countyName);
+
+      // Render template variables
       html = renderTemplate(AEO_PAGE_TEMPLATE, data);
+
+      // Inject contextual internal links
       html = injectContextualLinks(html);
+
+      // Inject live WordPress guides + county pills
+      html = await injectRelatedGuides(html, countySlug);
+
+      // Count how many guide pills were injected for UI feedback
+      const guideMatches = html.match(/class="guide-pill"/g);
+      setGuideCount(guideMatches ? guideMatches.length : 0);
+
       setGeneratedHtml(html);
       setGenerateStep('done');
     } catch (err) {
@@ -246,6 +437,7 @@ export default function PageGenerationModal({
       return;
     }
 
+    // Step 4: Validate
     setValidateStep('running');
     try {
       const result = validate(data, html);
@@ -286,9 +478,7 @@ export default function PageGenerationModal({
   }, []);
 
   useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
-    };
+    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
   }, [onClose]);
@@ -322,10 +512,6 @@ export default function PageGenerationModal({
   const canDownload =
     validateStep === 'done' && validation.errors.length === 0 && generatedHtml.length > 0;
 
-  // ── AppState integration ──
-  // Push the generated page into Rob's existing AEO Pipeline tracker so it
-  // shows up alongside pages built via the legacy flow. Single source of
-  // truth for "what pages exist in what state".
   const pushToAeoPipeline = (html: string, county: string) => {
     const slug = countyNameToSlug(county);
     const title = metadata?.title || `Medicare Broker ${county} NC`;
@@ -353,13 +539,11 @@ export default function PageGenerationModal({
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
-
     pushToAeoPipeline(generatedHtml, activeCounty);
     if (onGenerated) {
       onGenerated({
         ...query,
         county: activeCounty,
-        // pipelineStatus is a forward-compat field on QueryCandidate
         ...({ pipelineStatus: 'built', lastBuilt: new Date().toISOString() } as object),
       } as QueryCandidate);
     }
@@ -442,6 +626,7 @@ export default function PageGenerationModal({
             <X size={20} />
           </button>
         </div>
+
         <div style={{ padding: 22 }}>
           <div
             style={{
@@ -463,9 +648,7 @@ export default function PageGenerationModal({
             state={detectStep}
             content={
               detectStep === 'done' && detectedCounty ? (
-                <span>
-                  Detected: <strong>{detectedCounty} County</strong>
-                </span>
+                <span>Detected: <strong>{detectedCounty} County</strong></span>
               ) : detectStep === 'error' ? (
                 <div>
                   <div style={{ marginBottom: 10, color: '#fca5a5' }}>
@@ -479,9 +662,7 @@ export default function PageGenerationModal({
                     >
                       <option value="">Choose NC county…</option>
                       {countyList.map((c) => (
-                        <option key={c} value={c}>
-                          {c}
-                        </option>
+                        <option key={c} value={c}>{c}</option>
                       ))}
                     </select>
                     <button
@@ -509,9 +690,7 @@ export default function PageGenerationModal({
             content={
               loadStep === 'done' && countyData ? (
                 <div style={{ fontSize: 13, color: '#cbd5e1' }}>
-                  <div>
-                    Loaded: <strong>{countyData.county} County</strong>
-                  </div>
+                  <div>Loaded: <strong>{countyData.county} County</strong></div>
                   {countyData.health_system && (
                     <div style={{ color: '#9ca3af', marginTop: 2 }}>
                       Health System: {countyData.health_system}
@@ -538,12 +717,18 @@ export default function PageGenerationModal({
             state={generateStep}
             content={
               generateStep === 'done' ? (
-                <span>
-                  Page generated (<strong>{generatedHtml.length.toLocaleString()}</strong>{' '}
-                  characters)
-                </span>
+                <div>
+                  <div>
+                    Page generated (<strong>{generatedHtml.length.toLocaleString()}</strong> characters)
+                  </div>
+                  {guideCount > 0 && (
+                    <div style={{ color: '#4ade80', marginTop: 4, fontSize: 12 }}>
+                      ✓ {guideCount} live guide{guideCount !== 1 ? 's' : ''} injected from WordPress
+                    </div>
+                  )}
+                </div>
               ) : generateStep === 'running' ? (
-                <span style={{ color: '#9ca3af' }}>Generating HTML…</span>
+                <span style={{ color: '#9ca3af' }}>Generating HTML + fetching live guides…</span>
               ) : generateStep === 'error' ? (
                 <span style={{ color: '#fca5a5' }}>{errorMsg || 'Generation failed'}</span>
               ) : (
@@ -561,32 +746,20 @@ export default function PageGenerationModal({
                   <div style={{ color: '#cbd5e1', marginBottom: 8 }}>
                     {validation.errors.length === 0 ? '✓' : '✗'} Validation{' '}
                     {validation.errors.length === 0 ? 'passed' : 'failed'} (
-                    <span
-                      style={{
-                        color: validation.errors.length ? '#fca5a5' : '#4ade80',
-                      }}
-                    >
+                    <span style={{ color: validation.errors.length ? '#fca5a5' : '#4ade80' }}>
                       {validation.errors.length} errors
                     </span>
                     ,{' '}
-                    <span
-                      style={{
-                        color: validation.warnings.length ? '#fbbf24' : '#9ca3af',
-                      }}
-                    >
+                    <span style={{ color: validation.warnings.length ? '#fbbf24' : '#9ca3af' }}>
                       {validation.warnings.length} warnings
                     </span>
                     )
                   </div>
                   {validation.errors.map((e, i) => (
-                    <div key={i} style={{ color: '#fca5a5', fontSize: 12, marginTop: 2 }}>
-                      ✗ {e}
-                    </div>
+                    <div key={i} style={{ color: '#fca5a5', fontSize: 12, marginTop: 2 }}>✗ {e}</div>
                   ))}
                   {validation.warnings.map((w, i) => (
-                    <div key={i} style={{ color: '#fbbf24', fontSize: 12, marginTop: 2 }}>
-                      ⚠ {w}
-                    </div>
+                    <div key={i} style={{ color: '#fbbf24', fontSize: 12, marginTop: 2 }}>⚠ {w}</div>
                   ))}
                 </div>
               ) : validateStep === 'running' ? (
@@ -607,15 +780,7 @@ export default function PageGenerationModal({
                 borderRadius: 10,
               }}
             >
-              <div
-                style={{
-                  fontSize: 11,
-                  fontWeight: 700,
-                  color: '#9ca3af',
-                  letterSpacing: 0.5,
-                  marginBottom: 10,
-                }}
-              >
+              <div style={{ fontSize: 11, fontWeight: 700, color: '#9ca3af', letterSpacing: 0.5, marginBottom: 10 }}>
                 METADATA PREVIEW
               </div>
               <MetaRow label="Title" value={metadata.title} limit={60} />
@@ -624,6 +789,7 @@ export default function PageGenerationModal({
             </div>
           )}
         </div>
+
         <div
           style={{
             display: 'flex',
@@ -638,17 +804,11 @@ export default function PageGenerationModal({
           {toast && (
             <div style={{ marginRight: 'auto', color: '#4ade80', fontSize: 13 }}>{toast}</div>
           )}
-          <button onClick={onClose} style={secondaryBtnStyle}>
-            Cancel
-          </button>
+          <button onClick={onClose} style={secondaryBtnStyle}>Cancel</button>
           <button
             onClick={handleCopy}
             disabled={!canDownload}
-            style={{
-              ...secondaryBtnStyle,
-              opacity: canDownload ? 1 : 0.4,
-              cursor: canDownload ? 'pointer' : 'not-allowed',
-            }}
+            style={{ ...secondaryBtnStyle, opacity: canDownload ? 1 : 0.4, cursor: canDownload ? 'pointer' : 'not-allowed' }}
           >
             <Copy size={14} style={{ marginRight: 6 }} />
             Copy to Clipboard
@@ -656,11 +816,7 @@ export default function PageGenerationModal({
           <button
             onClick={handleDownload}
             disabled={!canDownload}
-            style={{
-              ...primaryBtnStyle,
-              opacity: canDownload ? 1 : 0.4,
-              cursor: canDownload ? 'pointer' : 'not-allowed',
-            }}
+            style={{ ...primaryBtnStyle, opacity: canDownload ? 1 : 0.4, cursor: canDownload ? 'pointer' : 'not-allowed' }}
           >
             <Download size={14} style={{ marginRight: 6 }} />
             Download HTML
