@@ -10,8 +10,8 @@ import { TEMPLATE_PLACEHOLDERS } from '@/lib/master-template';
 import { clusters } from '@/data/clusters';
 import { getFromStorage, saveToStorage } from '@/lib/utils';
 
-type PageType = 'medicare' | 'aca' | 'broker' | 'dual';
-type Mode = 'build' | 'fix' | 'scan' | 'cards';
+type PageType = 'medicare' | 'aca' | 'broker';
+type Mode = 'build' | 'fix' | 'scan';
 type NepqTab = 'medicare' | 'aca' | 'nepq';
 
 const LS_API_KEY = 'gh-cc-pb-apikey';
@@ -303,63 +303,69 @@ export default function PageBuilderPanel() {
   return (
     <div className="flex flex-col" style={{ height: 'calc(100vh - 160px)', overflow: 'hidden' }}>
 
-      {/* ── TOP BAR ROW 1 ── */}
-      {/* Title left · [Build New | Fix Existing | Scan HTML | NEPQ Cards | ● API Key] right — no spacer, justify-between */}
-      <div className="flex items-center justify-between px-4 py-2 border-b border-white/[0.07] bg-[#0E0E12] flex-shrink-0">
+      {/* ── TOP BAR ROW 1 — single left-to-right flex, no justify-between ── */}
+      {/* 📄 Page Builder · Build New · Fix Existing · Scan HTML · Copy for WordPress · ● API Key */}
+      <div className="flex items-center gap-2 px-4 py-2 border-b border-white/[0.07] bg-[#0E0E12] flex-shrink-0">
 
-        {/* Left: title */}
-        <div className="flex-shrink-0">
-          <div className="font-display text-sm font-bold text-white flex items-center gap-1.5">
-            <span>📄</span> Page Builder
-          </div>
-          <div className="text-[9px] text-gh-text-muted">v5.7.2 · 69-pt · {TEMPLATE_PLACEHOLDERS.length} placeholders</div>
+        {/* Title */}
+        <div className="flex-shrink-0 flex items-center gap-1.5 mr-1">
+          <span className="text-sm">📄</span>
+          <span className="font-display text-sm font-bold text-white whitespace-nowrap">Page Builder</span>
         </div>
 
-        {/* Right: mode buttons + API Key pill — all inline, no wrap */}
-        <div className="flex items-center gap-1 flex-shrink-0">
-          {([
-            { id: 'build' as Mode, label: '🚀 Build New' },
-            { id: 'fix' as Mode, label: '🔧 Fix Existing' },
-            { id: 'scan' as Mode, label: '🔍 Scan HTML' },
-            { id: 'cards' as Mode, label: '🃏 NEPQ Cards' },
-          ]).map((m) => (
-            <button key={m.id} onClick={() => setMode(m.id)}
-              className={`px-3 py-1.5 rounded-lg text-[11px] font-bold transition-all whitespace-nowrap ${mode === m.id ? 'bg-white/[0.12] text-white' : 'bg-white/[0.04] text-gh-text-muted hover:bg-white/[0.06]'}`}>
-              {m.label}
-            </button>
-          ))}
+        <div className="w-px h-4 bg-white/[0.1] flex-shrink-0" />
 
-          {/* API Key pill — sits right next to NEPQ Cards */}
-          <div ref={pillRef} className="relative ml-1">
-            <button onClick={() => { setApiDraft(apiKey); setApiPillOpen(!apiPillOpen); }}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-bold border transition-all whitespace-nowrap"
-              style={{ background: apiKey ? 'rgba(13,148,136,0.12)' : 'rgba(255,255,255,0.04)', borderColor: apiKey ? 'rgba(13,148,136,0.35)' : 'rgba(255,255,255,0.1)', color: apiKey ? '#2DD4BF' : '#6B7B8D' }}>
-              <span className="w-1.5 h-1.5 rounded-full" style={{ background: apiKey ? '#34C759' : '#6B7280' }} />
-              API Key
-              <ChevronDown className="w-3 h-3 opacity-60" />
-            </button>
-            {apiPillOpen && (
-              <div className="absolute right-0 top-[calc(100%+6px)] z-50 w-72 rounded-xl border border-white/[0.12] bg-[#1A1A22] shadow-xl p-4 space-y-3">
-                <label className="text-[10px] font-bold text-gh-text-muted uppercase tracking-wider block">Claude API Key</label>
-                <input type="password" value={apiDraft} onChange={(e) => setApiDraft(e.target.value)} placeholder="sk-ant-api03-..."
-                  className="w-full px-3 py-2 rounded-lg border border-white/[0.12] bg-white/[0.04] text-white text-xs outline-none"
-                  autoFocus onKeyDown={(e) => { if (e.key === 'Enter') { saveApiKey(apiDraft); setApiPillOpen(false); } }} />
-                <button onClick={() => { saveApiKey(apiDraft); setApiPillOpen(false); }}
-                  className="w-full py-2 rounded-lg text-xs font-bold bg-teal-600 text-white hover:bg-teal-500">
-                  Save &amp; Hide
-                </button>
-              </div>
-            )}
-          </div>
+        {/* Mode buttons */}
+        {([
+          { id: 'build' as Mode, label: '🚀 Build New' },
+          { id: 'fix' as Mode, label: '🔧 Fix Existing' },
+          { id: 'scan' as Mode, label: '🔍 Scan HTML' },
+        ]).map((m) => (
+          <button key={m.id} onClick={() => setMode(m.id)}
+            className={`px-3 py-1.5 rounded-lg text-[11px] font-bold transition-all whitespace-nowrap flex-shrink-0 ${mode === m.id ? 'bg-white/[0.12] text-white' : 'bg-white/[0.04] text-gh-text-muted hover:bg-white/[0.06]'}`}>
+            {m.label}
+          </button>
+        ))}
+
+        <div className="w-px h-4 bg-white/[0.1] flex-shrink-0" />
+
+        {/* Copy for WordPress */}
+        <button onClick={handleCopyWordPress} disabled={!generatedHtml && !scanHtml}
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-bold transition-all disabled:opacity-40 flex-shrink-0 whitespace-nowrap ${copied ? 'bg-emerald-500/20 border border-emerald-500/30 text-emerald-400' : 'bg-gradient-to-r from-teal-600/80 to-blue-600/80 text-white hover:from-teal-600 hover:to-blue-600'}`}>
+          {copied ? <><Check className="w-3 h-3" /> Copied!</> : <><Copy className="w-3 h-3" /> Copy for WP</>}
+        </button>
+
+        {/* API Key pill */}
+        <div ref={pillRef} className="relative flex-shrink-0">
+          <button onClick={() => { setApiDraft(apiKey); setApiPillOpen(!apiPillOpen); }}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-bold border transition-all whitespace-nowrap"
+            style={{ background: apiKey ? 'rgba(13,148,136,0.12)' : 'rgba(255,255,255,0.04)', borderColor: apiKey ? 'rgba(13,148,136,0.35)' : 'rgba(255,255,255,0.1)', color: apiKey ? '#2DD4BF' : '#6B7B8D' }}>
+            <span className="w-1.5 h-1.5 rounded-full" style={{ background: apiKey ? '#34C759' : '#6B7280' }} />
+            API Key
+            <ChevronDown className="w-3 h-3 opacity-60" />
+          </button>
+          {apiPillOpen && (
+            <div className="absolute right-0 top-[calc(100%+6px)] z-50 w-72 rounded-xl border border-white/[0.12] bg-[#1A1A22] shadow-xl p-4 space-y-3">
+              <label className="text-[10px] font-bold text-gh-text-muted uppercase tracking-wider block">Claude API Key</label>
+              <input type="password" value={apiDraft} onChange={(e) => setApiDraft(e.target.value)} placeholder="sk-ant-api03-..."
+                className="w-full px-3 py-2 rounded-lg border border-white/[0.12] bg-white/[0.04] text-white text-xs outline-none"
+                autoFocus onKeyDown={(e) => { if (e.key === 'Enter') { saveApiKey(apiDraft); setApiPillOpen(false); } }} />
+              <button onClick={() => { saveApiKey(apiDraft); setApiPillOpen(false); }}
+                className="w-full py-2 rounded-lg text-xs font-bold bg-teal-600 text-white hover:bg-teal-500">
+                Save &amp; Hide
+              </button>
+            </div>
+          )}
         </div>
+
+        {buildError && <div className="ml-2 text-[10px] text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-1 flex-shrink-0">{buildError}</div>}
       </div>
 
-      {/* ── TOP BAR ROW 2: Page type + Copy for WordPress ── */}
+      {/* ── TOP BAR ROW 2: Page type tabs — Medicare · ACA · Broker ── */}
       <div className="flex items-center gap-2 px-4 py-2 border-b border-white/[0.07] bg-[#0E0E12] flex-shrink-0">
         {([
           { id: 'medicare' as PageType, label: 'Medicare', color: '#4B9CD3' },
           { id: 'aca' as PageType, label: 'ACA', color: '#16A34A' },
-          { id: 'dual' as PageType, label: 'Dual', color: '#A78BFA' },
           { id: 'broker' as PageType, label: 'Broker', color: '#F97316' },
         ]).map((t) => (
           <button key={t.id} onClick={() => setPageType(t.id)}
@@ -368,12 +374,6 @@ export default function PageBuilderPanel() {
             {t.label}
           </button>
         ))}
-        <div className="w-px h-4 bg-white/[0.1] mx-1 flex-shrink-0" />
-        <button onClick={handleCopyWordPress} disabled={!generatedHtml && !scanHtml}
-          className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-[11px] font-bold transition-all disabled:opacity-40 flex-shrink-0 ${copied ? 'bg-emerald-500/20 border border-emerald-500/30 text-emerald-400' : 'bg-gradient-to-r from-teal-600/80 to-blue-600/80 text-white hover:from-teal-600 hover:to-blue-600'}`}>
-          {copied ? <><Check className="w-3 h-3" /> Copied!</> : <><Copy className="w-3 h-3" /> Copy for WordPress</>}
-        </button>
-        {buildError && <div className="ml-auto text-[10px] text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-1">{buildError}</div>}
       </div>
 
       {/* ── 3-PANEL BODY ── */}
@@ -465,56 +465,37 @@ export default function PageBuilderPanel() {
             </div>
           )}
 
-          {/* NEPQ Cards mode */}
-          {mode === 'cards' && (
-            <div className="flex-1 overflow-y-auto p-4">
-              <div className="text-[10px] font-bold text-gh-text-muted uppercase tracking-widest mb-3">{pageType === 'aca' ? 'ACA' : 'Medicare'} NEPQ Cards + Sequence</div>
-              <div className="grid grid-cols-1 gap-4">
-                {[...MEDICARE_CARDS, ...ACA_CARDS, ...NEPQ_CARDS].map((card) => (
-                  <div key={card.id} className="card p-4 space-y-2">
-                    <div className="text-[9px] font-extrabold uppercase tracking-widest text-teal-400">{card.tag}</div>
-                    <div className="text-[10px] text-gh-text-muted">{card.tagline}</div>
-                    <div className="text-sm font-bold text-white leading-snug">{card.q}</div>
-                    <div className="text-xs text-gh-text-soft leading-relaxed">{card.a}</div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
           {/* Viewfinder + zone overlays */}
-          {mode !== 'cards' && (
-            <div className="flex-1 overflow-y-auto relative">
-              {ZONES.map((zone, idx) => {
-                const pct = ZONE_OVERLAY_PCTS[idx];
-                const applied = zoneApplied[zone.id];
-                return (
-                  <div key={zone.id}
-                    style={{ position: 'absolute', top: `${pct}%`, left: 0, right: 0, zIndex: 10, display: 'flex', alignItems: 'center', gap: 4, padding: '2px 8px', background: `${zone.color}20`, cursor: selectedCard ? 'pointer' : 'default' }}
-                    onClick={() => {
-                      if (!selectedCard) return;
-                      const card = allCards.find((c) => c.id === selectedCard);
-                      if (card) { setZoneApplied((prev) => ({ ...prev, [zone.id]: { q: card.q, a: card.a, tag: card.tag } })); setSelectedCard(null); }
-                    }}>
-                    <div style={{ width: 14, height: 14, borderRadius: 3, background: zone.color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 7, fontWeight: 800, color: '#fff', flexShrink: 0 }}>
-                      {zone.id.replace('z', '')}
-                    </div>
-                    <span style={{ fontSize: 8, fontWeight: 700, color: zone.color, whiteSpace: 'nowrap' }}>{zone.label} — {zone.desc}</span>
-                    {applied && <span style={{ fontSize: 7, color: '#2DD4BF', fontWeight: 600 }}>✓ {applied.tag}</span>}
-                    <div style={{ flex: 1, height: 1, background: zone.color, opacity: 0.3 }} />
-                    {applied && (
-                      <button onClick={(e) => { e.stopPropagation(); setZoneApplied((prev) => { const n = { ...prev }; delete n[zone.id]; return n; }); }}
-                        style={{ fontSize: 9, color: '#f87171', fontWeight: 700, padding: '0 3px', background: 'none', border: 'none', cursor: 'pointer' }}>✕</button>
-                    )}
+          <div className="flex-1 overflow-y-auto relative">
+            {ZONES.map((zone, idx) => {
+              const pct = ZONE_OVERLAY_PCTS[idx];
+              const applied = zoneApplied[zone.id];
+              return (
+                <div key={zone.id}
+                  style={{ position: 'absolute', top: `${pct}%`, left: 0, right: 0, zIndex: 10, display: 'flex', alignItems: 'center', gap: 4, padding: '2px 8px', background: `${zone.color}20`, cursor: selectedCard ? 'pointer' : 'default' }}
+                  onClick={() => {
+                    if (!selectedCard) return;
+                    const card = allCards.find((c) => c.id === selectedCard);
+                    if (card) { setZoneApplied((prev) => ({ ...prev, [zone.id]: { q: card.q, a: card.a, tag: card.tag } })); setSelectedCard(null); }
+                  }}>
+                  <div style={{ width: 14, height: 14, borderRadius: 3, background: zone.color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 7, fontWeight: 800, color: '#fff', flexShrink: 0 }}>
+                    {zone.id.replace('z', '')}
                   </div>
-                );
-              })}
-              <iframe srcDoc={viewfinderHtml} className="w-full" style={{ height: '1600px', border: 'none', display: 'block' }}
-                sandbox="allow-scripts" title="Page Preview" />
-            </div>
-          )}
+                  <span style={{ fontSize: 8, fontWeight: 700, color: zone.color, whiteSpace: 'nowrap' }}>{zone.label} — {zone.desc}</span>
+                  {applied && <span style={{ fontSize: 7, color: '#2DD4BF', fontWeight: 600 }}>✓ {applied.tag}</span>}
+                  <div style={{ flex: 1, height: 1, background: zone.color, opacity: 0.3 }} />
+                  {applied && (
+                    <button onClick={(e) => { e.stopPropagation(); setZoneApplied((prev) => { const n = { ...prev }; delete n[zone.id]; return n; }); }}
+                      style={{ fontSize: 9, color: '#f87171', fontWeight: 700, padding: '0 3px', background: 'none', border: 'none', cursor: 'pointer' }}>✕</button>
+                  )}
+                </div>
+              );
+            })}
+            <iframe srcDoc={viewfinderHtml} className="w-full" style={{ height: '1600px', border: 'none', display: 'block' }}
+              sandbox="allow-scripts" title="Page Preview" />
+          </div>
 
-          {appliedZoneCount > 0 && generatedHtml && mode !== 'cards' && (
+          {appliedZoneCount > 0 && generatedHtml && (
             <div className="px-4 py-2 border-t border-white/[0.07] flex-shrink-0">
               <button onClick={injectZones} className="w-full py-2 rounded-lg text-xs font-bold bg-teal-600 text-white hover:bg-teal-500">
                 Inject {appliedZoneCount} NEPQ Block{appliedZoneCount > 1 ? 's' : ''} into Page
