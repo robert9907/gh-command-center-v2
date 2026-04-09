@@ -265,9 +265,9 @@ a{text-decoration:none;}
 </div>
 <div class="section-light">
   <div class="inner" style="text-align:center;">
-    <div class="section-label" style="text-align:center;">Why I don't lie to you</div>
-    <div class="honesty-h2">I get paid the same whether you pick Humana, Aetna, or UnitedHealthcare.</div>
-    <p class="honesty-body">Most brokers get paid more to steer you toward certain plans. I don&rsquo;t work that way. My commission is the same regardless of which plan you pick &mdash; so the only thing I&rsquo;m optimizing for is making sure you&rsquo;re covered when you actually need it. That&rsquo;s what keeps people coming back. And referring their neighbors.</p>
+    <div class="section-label" style="text-align:center;">It pays to talk to the right Health Insurance Broker</div>
+    <div class="honesty-h2">It doesn&rsquo;t matter which carrier you choose &mdash; because I get paid by the insurance carrier to manage your plan.</div>
+    <p class="honesty-body">Most call centers get paid more to steer your business toward certain carriers based on volume and contracts. The only thing I&rsquo;m optimizing for is making sure you&rsquo;re covered correctly when you actually need it. That&rsquo;s what keeps people coming back. And referring their neighbors.</p>
   </div>
 </div>
 <div class="section-white" style="padding-top:48px;padding-bottom:32px;border-top:0.5px solid #e5e5ea;">
