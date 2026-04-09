@@ -267,7 +267,7 @@ a{text-decoration:none;}
   <div class="inner" style="text-align:center;">
     <div class="section-label" style="text-align:center;">Why I don't lie to you</div>
     <div class="honesty-h2">I get paid the same whether you pick Humana, Aetna, or UnitedHealthcare.</div>
-    <p class="honesty-body">I get paid the same whether you pick a $0 premium plan or a $150 premium plan. Zero financial incentive to sell you the wrong plan. Call centers get bonuses for enrolling X people in Plan A. I don't. My incentive is to tell you the truth so you refer your friends.</p>
+    <p class="honesty-body">Most brokers get paid more to steer you toward certain plans. I don&rsquo;t work that way. My commission is the same regardless of which plan you pick &mdash; so the only thing I&rsquo;m optimizing for is making sure you&rsquo;re covered when you actually need it. That&rsquo;s what keeps people coming back. And referring their neighbors.</p>
   </div>
 </div>
 <div class="section-white" style="padding-top:48px;padding-bottom:32px;border-top:0.5px solid #e5e5ea;">
@@ -308,30 +308,30 @@ a{text-decoration:none;}
 <div class="final-cta" style="background:#0d2f5e !important;padding:72px 24px !important;">
   <div class="inner">
     <!-- Desktop: 2-column 35/65 layout -->
-    <div class="final-cta-desktop" style="display:grid;grid-template-columns:35% 1fr;gap:48px;align-items:start;max-width:960px;margin:0 auto;">
-      <div style="text-align:left;">
-        <div style="font-family:-apple-system,'SF Pro Display',sans-serif;font-size:clamp(22px,3vw,28px) !important;font-weight:700 !important;color:#fff !important;line-height:1.15 !important;letter-spacing:-0.02em !important;margin-bottom:10px !important;">10 minutes. You&#39;ll know exactly where you stand.</div>
+    <div class="final-cta-desktop" style="position:relative !important;isolation:isolate !important;display:grid !important;grid-template-columns:35% 1fr !important;gap:48px !important;align-items:start !important;max-width:960px !important;width:100% !important;margin:0 auto !important;box-sizing:border-box !important;">
+      <div style="text-align:left !important;">
+        <div style="font-family:-apple-system,'SF Pro Display',sans-serif !important;font-size:clamp(22px,3vw,28px) !important;font-weight:700 !important;color:#fff !important;line-height:1.15 !important;letter-spacing:-0.02em !important;margin-bottom:10px !important;">10 minutes. You&#39;ll know exactly where you stand.</div>
         <div style="font-size:13px !important;color:rgba(255,255,255,0.45) !important;line-height:1.6 !important;margin-top:10px !important;">Rob Simm &middot; Licensed NC Medicare Broker &middot; NPN #10447418</div>
       </div>
-      <div style="display:flex;flex-direction:column;gap:10px;">
-        <a href="tel:8287613326" style="display:flex !important;flex-direction:column !important;align-items:center !important;justify-content:center !important;padding:18px 28px !important;background:#83f0f9 !important;border-radius:100px !important;text-decoration:none !important;">
+      <div style="display:flex !important;flex-direction:column !important;gap:10px !important;width:100% !important;box-sizing:border-box !important;min-width:0 !important;">
+        <a href="tel:8287613326" style="display:flex !important;flex-direction:column !important;align-items:center !important;justify-content:center !important;padding:18px 28px !important;background:#83f0f9 !important;border-radius:100px !important;text-decoration:none !important;width:100% !important;box-sizing:border-box !important;">
           <div style="font-size:10px !important;font-weight:700 !important;color:#0d2f5e !important;letter-spacing:0.1em !important;text-transform:uppercase !important;margin-bottom:3px !important;">Call Rob directly</div>
           <div style="font-size:20px !important;font-weight:700 !important;color:#0d2f5e !important;letter-spacing:-0.01em !important;">(828) 761-3326</div>
           <div style="font-size:11px !important;color:rgba(13,47,94,0.55) !important;margin-top:2px !important;">Mon&ndash;Fri 9am&ndash;7pm &middot; Sat 12pm&ndash;4pm</div>
         </a>
-        <div style="display:flex;align-items:center;gap:10px;">
-          <div style="flex:1;height:1px;background:rgba(255,255,255,0.08);"></div>
+        <div style="display:flex !important;align-items:center !important;gap:10px !important;">
+          <div style="flex:1 !important;height:1px !important;background:rgba(255,255,255,0.08) !important;"></div>
           <div style="font-size:10px !important;color:rgba(255,255,255,0.25) !important;letter-spacing:0.08em !important;text-transform:uppercase !important;">or</div>
-          <div style="flex:1;height:1px;background:rgba(255,255,255,0.08);"></div>
+          <div style="flex:1 !important;height:1px !important;background:rgba(255,255,255,0.08) !important;"></div>
         </div>
-        <a href="sms:8287613326" style="display:flex !important;align-items:center !important;justify-content:center !important;padding:15px 28px !important;background:rgba(255,255,255,0.06) !important;border:1.5px solid rgba(255,255,255,0.18) !important;border-radius:100px !important;color:#fff !important;font-size:14px !important;font-weight:600 !important;text-decoration:none !important;">Text Us</a>
-        <a href="https://calendly.com/robert-generationhealth/new-meeting" style="display:flex !important;align-items:center !important;justify-content:center !important;padding:15px 28px !important;background:rgba(255,255,255,0.06) !important;border:1.5px solid rgba(255,255,255,0.18) !important;border-radius:100px !important;color:#fff !important;font-size:14px !important;font-weight:600 !important;text-decoration:none !important;">Book a Free Call</a>
-        <div style="display:flex;align-items:center;gap:10px;">
-          <div style="flex:1;height:1px;background:rgba(255,255,255,0.08);"></div>
+        <a href="sms:8287613326" style="display:flex !important;align-items:center !important;justify-content:center !important;padding:15px 28px !important;background:rgba(255,255,255,0.06) !important;border:1.5px solid rgba(255,255,255,0.18) !important;border-radius:100px !important;color:#fff !important;font-size:14px !important;font-weight:600 !important;text-decoration:none !important;width:100% !important;box-sizing:border-box !important;">Text Us</a>
+        <a href="https://calendly.com/robert-generationhealth/new-meeting" style="display:flex !important;align-items:center !important;justify-content:center !important;padding:15px 28px !important;background:rgba(255,255,255,0.06) !important;border:1.5px solid rgba(255,255,255,0.18) !important;border-radius:100px !important;color:#fff !important;font-size:14px !important;font-weight:600 !important;text-decoration:none !important;width:100% !important;box-sizing:border-box !important;">Book a Free Call</a>
+        <div style="display:flex !important;align-items:center !important;gap:10px !important;">
+          <div style="flex:1 !important;height:1px !important;background:rgba(255,255,255,0.08) !important;"></div>
           <div style="font-size:10px !important;color:rgba(255,255,255,0.25) !important;letter-spacing:0.08em !important;text-transform:uppercase !important;">compare plans</div>
-          <div style="flex:1;height:1px;background:rgba(255,255,255,0.08);"></div>
+          <div style="flex:1 !important;height:1px !important;background:rgba(255,255,255,0.08) !important;"></div>
         </div>
-        <a href="https://www.sunfirematrix.com/app/consumer/medicareadvocates/10447418/#/" style="display:flex !important;align-items:center !important;justify-content:center !important;padding:15px 28px !important;background:rgba(131,240,249,0.08) !important;border:1.5px solid rgba(131,240,249,0.25) !important;border-radius:100px !important;color:#83f0f9 !important;font-size:14px !important;font-weight:600 !important;text-decoration:none !important;">Compare Medicare Plans &mdash; SunFire &rarr;</a>
+        <a href="https://www.sunfirematrix.com/app/consumer/medicareadvocates/10447418/#/" style="display:flex !important;align-items:center !important;justify-content:center !important;padding:15px 28px !important;background:rgba(131,240,249,0.08) !important;border:1.5px solid rgba(131,240,249,0.25) !important;border-radius:100px !important;color:#83f0f9 !important;font-size:14px !important;font-weight:600 !important;text-decoration:none !important;width:100% !important;box-sizing:border-box !important;">Compare Medicare Plans &mdash; SunFire &rarr;</a>
         <div style="font-size:10px !important;font-weight:700 !important;color:rgba(255,255,255,0.45) !important;text-align:center !important;letter-spacing:0.07em !important;text-transform:uppercase !important;margin-top:4px !important;">No pressure &middot; No sales pitch &middot; Your data never sold</div>
       </div>
     </div>
