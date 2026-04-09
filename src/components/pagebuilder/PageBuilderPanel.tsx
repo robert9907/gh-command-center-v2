@@ -107,6 +107,9 @@ function callClaude(apiKey: string, prompt: string, maxTokens = 8192): Promise<R
 }
 
 const ZONE_OVERLAY_PCTS = [31, 43, 54, 62, 72, 79, 86, 93];
+const SCALE = 0.5;
+const IFRAME_W = 1024;
+const IFRAME_H = 2400;
 
 export default function PageBuilderPanel() {
   const [mode, setMode] = useState<Mode>('build');
@@ -303,19 +306,13 @@ export default function PageBuilderPanel() {
   return (
     <div className="flex flex-col" style={{ height: 'calc(100vh - 160px)', overflow: 'hidden' }}>
 
-      {/* ── TOP BAR ROW 1 — single left-to-right flex, no justify-between ── */}
-      {/* 📄 Page Builder · Build New · Fix Existing · Scan HTML · Copy for WordPress · ● API Key */}
+      {/* ── TOP BAR ROW 1 ── */}
       <div className="flex items-center gap-2 px-4 py-2 border-b border-white/[0.07] bg-[#0E0E12] flex-shrink-0">
-
-        {/* Title */}
         <div className="flex-shrink-0 flex items-center gap-1.5 mr-1">
           <span className="text-sm">📄</span>
           <span className="font-display text-sm font-bold text-white whitespace-nowrap">Page Builder</span>
         </div>
-
         <div className="w-px h-4 bg-white/[0.1] flex-shrink-0" />
-
-        {/* Mode buttons */}
         {([
           { id: 'build' as Mode, label: '🚀 Build New' },
           { id: 'fix' as Mode, label: '🔧 Fix Existing' },
@@ -326,16 +323,11 @@ export default function PageBuilderPanel() {
             {m.label}
           </button>
         ))}
-
         <div className="w-px h-4 bg-white/[0.1] flex-shrink-0" />
-
-        {/* Copy for WordPress */}
         <button onClick={handleCopyWordPress} disabled={!generatedHtml && !scanHtml}
           className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-bold transition-all disabled:opacity-40 flex-shrink-0 whitespace-nowrap ${copied ? 'bg-emerald-500/20 border border-emerald-500/30 text-emerald-400' : 'bg-gradient-to-r from-teal-600/80 to-blue-600/80 text-white hover:from-teal-600 hover:to-blue-600'}`}>
           {copied ? <><Check className="w-3 h-3" /> Copied!</> : <><Copy className="w-3 h-3" /> Copy for WP</>}
         </button>
-
-        {/* API Key pill */}
         <div ref={pillRef} className="relative flex-shrink-0">
           <button onClick={() => { setApiDraft(apiKey); setApiPillOpen(!apiPillOpen); }}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-bold border transition-all whitespace-nowrap"
@@ -357,11 +349,10 @@ export default function PageBuilderPanel() {
             </div>
           )}
         </div>
-
         {buildError && <div className="ml-2 text-[10px] text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-1 flex-shrink-0">{buildError}</div>}
       </div>
 
-      {/* ── TOP BAR ROW 2: Page type tabs — Medicare · ACA · Broker ── */}
+      {/* ── TOP BAR ROW 2: Page type tabs ── */}
       <div className="flex items-center gap-2 px-4 py-2 border-b border-white/[0.07] bg-[#0E0E12] flex-shrink-0">
         {([
           { id: 'medicare' as PageType, label: 'Medicare', color: '#4B9CD3' },
@@ -408,7 +399,7 @@ export default function PageBuilderPanel() {
         {/* CENTER: Viewfinder */}
         <div className="flex-1 flex flex-col bg-[#121216] overflow-hidden min-w-0">
 
-          {/* Browser chrome */}
+          {/* Browser chrome bar */}
           <div className="flex items-center gap-2 px-3 py-2 bg-[#1A2332] flex-shrink-0">
             <div className="flex gap-1.5 flex-shrink-0">
               <div className="w-3 h-3 rounded-full bg-[#FF5F57]" />
@@ -465,34 +456,52 @@ export default function PageBuilderPanel() {
             </div>
           )}
 
-          {/* Viewfinder + zone overlays */}
-          <div className="flex-1 overflow-y-auto relative">
-            {ZONES.map((zone, idx) => {
-              const pct = ZONE_OVERLAY_PCTS[idx];
-              const applied = zoneApplied[zone.id];
-              return (
-                <div key={zone.id}
-                  style={{ position: 'absolute', top: `${pct}%`, left: 0, right: 0, zIndex: 10, display: 'flex', alignItems: 'center', gap: 4, padding: '2px 8px', background: `${zone.color}20`, cursor: selectedCard ? 'pointer' : 'default' }}
-                  onClick={() => {
-                    if (!selectedCard) return;
-                    const card = allCards.find((c) => c.id === selectedCard);
-                    if (card) { setZoneApplied((prev) => ({ ...prev, [zone.id]: { q: card.q, a: card.a, tag: card.tag } })); setSelectedCard(null); }
-                  }}>
-                  <div style={{ width: 14, height: 14, borderRadius: 3, background: zone.color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 7, fontWeight: 800, color: '#fff', flexShrink: 0 }}>
-                    {zone.id.replace('z', '')}
+          {/* Scaled viewfinder — iframe rendered at IFRAME_W x IFRAME_H, scaled down to 50% */}
+          <div className="flex-1 overflow-y-auto bg-[#0a0a0e]">
+            <div style={{ position: 'relative', width: `${IFRAME_W * SCALE}px`, height: `${IFRAME_H * SCALE}px`, margin: '0 auto' }}>
+              {/* Zone overlays — positioned in scaled space */}
+              {ZONES.map((zone, idx) => {
+                const topPx = (IFRAME_H * ZONE_OVERLAY_PCTS[idx] / 100) * SCALE;
+                const applied = zoneApplied[zone.id];
+                return (
+                  <div key={zone.id}
+                    style={{ position: 'absolute', top: `${topPx}px`, left: 0, right: 0, zIndex: 10, display: 'flex', alignItems: 'center', gap: 4, padding: '2px 8px', background: `${zone.color}20`, cursor: selectedCard ? 'pointer' : 'default' }}
+                    onClick={() => {
+                      if (!selectedCard) return;
+                      const card = allCards.find((c) => c.id === selectedCard);
+                      if (card) { setZoneApplied((prev) => ({ ...prev, [zone.id]: { q: card.q, a: card.a, tag: card.tag } })); setSelectedCard(null); }
+                    }}>
+                    <div style={{ width: 14, height: 14, borderRadius: 3, background: zone.color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 7, fontWeight: 800, color: '#fff', flexShrink: 0 }}>
+                      {zone.id.replace('z', '')}
+                    </div>
+                    <span style={{ fontSize: 8, fontWeight: 700, color: zone.color, whiteSpace: 'nowrap' }}>{zone.label} — {zone.desc}</span>
+                    {applied && <span style={{ fontSize: 7, color: '#2DD4BF', fontWeight: 600 }}>✓ {applied.tag}</span>}
+                    <div style={{ flex: 1, height: 1, background: zone.color, opacity: 0.3 }} />
+                    {applied && (
+                      <button onClick={(e) => { e.stopPropagation(); setZoneApplied((prev) => { const n = { ...prev }; delete n[zone.id]; return n; }); }}
+                        style={{ fontSize: 9, color: '#f87171', fontWeight: 700, padding: '0 3px', background: 'none', border: 'none', cursor: 'pointer' }}>✕</button>
+                    )}
                   </div>
-                  <span style={{ fontSize: 8, fontWeight: 700, color: zone.color, whiteSpace: 'nowrap' }}>{zone.label} — {zone.desc}</span>
-                  {applied && <span style={{ fontSize: 7, color: '#2DD4BF', fontWeight: 600 }}>✓ {applied.tag}</span>}
-                  <div style={{ flex: 1, height: 1, background: zone.color, opacity: 0.3 }} />
-                  {applied && (
-                    <button onClick={(e) => { e.stopPropagation(); setZoneApplied((prev) => { const n = { ...prev }; delete n[zone.id]; return n; }); }}
-                      style={{ fontSize: 9, color: '#f87171', fontWeight: 700, padding: '0 3px', background: 'none', border: 'none', cursor: 'pointer' }}>✕</button>
-                  )}
-                </div>
-              );
-            })}
-            <iframe srcDoc={viewfinderHtml} className="w-full" style={{ height: '1600px', border: 'none', display: 'block' }}
-              sandbox="allow-scripts" title="Page Preview" />
+                );
+              })}
+              {/* Scaled iframe */}
+              <iframe
+                srcDoc={viewfinderHtml}
+                style={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  width: `${IFRAME_W}px`,
+                  height: `${IFRAME_H}px`,
+                  border: 'none',
+                  transformOrigin: 'top left',
+                  transform: `scale(${SCALE})`,
+                  pointerEvents: 'none',
+                }}
+                sandbox="allow-scripts"
+                title="Page Preview"
+              />
+            </div>
           </div>
 
           {appliedZoneCount > 0 && generatedHtml && (
@@ -507,7 +516,6 @@ export default function PageBuilderPanel() {
         {/* RIGHT: Scanner + NEPQ Cards */}
         <div className="flex-shrink-0 border-l border-white/[0.07] bg-[#0E0E12] flex flex-col overflow-hidden" style={{ width: '260px' }}>
 
-          {/* Score header */}
           <div className="px-4 py-3 border-b border-white/[0.07] flex-shrink-0">
             {scanResult ? (
               <>
@@ -544,7 +552,6 @@ export default function PageBuilderPanel() {
             )}
           </div>
 
-          {/* Scanner check rows */}
           <div className="flex-shrink-0 overflow-y-auto" style={{ maxHeight: '320px' }}>
             {scanResult && CAT_ORDER.map((cat) => {
               const checks = scanResult.checks.filter((c) => c.cat === cat);
@@ -575,7 +582,6 @@ export default function PageBuilderPanel() {
 
           <div className="h-px bg-white/[0.07] flex-shrink-0" />
 
-          {/* NEPQ Cards */}
           <div className="px-3 pt-2.5 pb-1.5 flex-shrink-0">
             <div className="text-[9px] font-bold text-gh-text-muted uppercase tracking-widest mb-2">NEPQ Cards</div>
             <div className="flex gap-1">
