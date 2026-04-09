@@ -271,7 +271,7 @@ function QueueTab({ queue, setQueue, apiKeys }: QueueTabProps) {
   const stats = useMemo(() => {
     const total = queue.length;
     const tested = queue.filter((q) => {
-      const s = q.citationStatus || {};
+      const s = (q.citationStatus || {}) as import('@/lib/seedExpansion').CitationStatus;
       return (
         s.claude !== null ||
         s.chatgpt !== null ||
@@ -280,7 +280,7 @@ function QueueTab({ queue, setQueue, apiKeys }: QueueTabProps) {
       );
     }).length;
     const cited = queue.filter((q) => {
-      const s = q.citationStatus || {};
+      const s = (q.citationStatus || {}) as import('@/lib/seedExpansion').CitationStatus;
       return (
         s.claude === true ||
         s.chatgpt === true ||
