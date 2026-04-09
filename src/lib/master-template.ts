@@ -639,7 +639,7 @@ article li::before{content:'';position:absolute;left:0;top:10px;width:8px;height
 .gh-col-list{list-style:none;margin:0 !important;padding:0 !important;}
 .gh-col-list li{padding:7px 0 7px 20px !important;position:relative;border-bottom:1px solid rgba(0,0,0,.05);font-size:13px !important;line-height:1.6 !important;color:var(--charcoal) !important;}
 .gh-col-list li:last-child{border-bottom:none;}
-.gh-col-list li::before{content:"→" !important;position:absolute;left:0;color:var(--carolina);font-size:12px;top:8px !important;width:auto !important;height:auto !important;background:none !important;border-radius:0 !important;}
+.gh-col-list li::before{content:"\\2192" !important;position:absolute;left:0;color:var(--carolina);font-size:12px;top:8px !important;width:auto !important;height:auto !important;background:none !important;border-radius:0 !important;}
 
 
 /* ════════════════════════
@@ -749,13 +749,13 @@ article li::before{content:'';position:absolute;left:0;top:10px;width:8px;height
 .gh-related>h3{font-family:var(--font-display);font-size:22px;font-weight:600;color:var(--midnight);margin:0 0 24px;}
 .gh-related-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px;}
 .gh-rlink{display:flex;align-items:center;gap:7px;padding:10px 14px;background:var(--white);border:1px solid rgba(0,0,0,.06);border-radius:var(--r-md);font-size:14px;font-weight:500;color:var(--charcoal);text-decoration:none;transition:all 180ms var(--ease);}
-.gh-rlink::before{content:"→";color:var(--carolina);font-size:12px;flex-shrink:0;}
+.gh-rlink::before{content:"\\2192";color:var(--carolina);font-size:12px;flex-shrink:0;}
 .gh-rlink:hover{color:var(--carolina);border-color:var(--carolina);}
 .gh-county-hd{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--carolina);margin:24px 0 12px;padding-top:24px;border-top:1px solid var(--mist);}
 .gh-county-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;}
 .gh-clink{display:flex;align-items:center;gap:5px;padding:9px 12px;background:var(--white);border:1px solid rgba(0,0,0,.06);border-radius:var(--r-md);font-size:13px;font-weight:600;color:var(--carolina);text-decoration:none;transition:all 180ms var(--ease);}
 .gh-clink:hover{background:var(--blue-50);border-color:var(--carolina);}
-.gh-clink::before{content:"📍";font-size:10px;}
+.gh-clink::before{content:"→";font-size:12px;margin-right:4px;}
 
 
 /* ════════════════════════
@@ -2640,11 +2640,11 @@ article li::before{content:'';position:absolute;left:0;top:10px;width:8px;height
      ═══════════════════════════════════════════════════════════ -->
 <div class="gh-container">
   <div class="gh-author">
-    <div class="gh-author-header" style="background:linear-gradient(135deg,#2563EB,#1D4ED8);color:#fff;padding:40px 36px;text-align:center;">
+    <div class="gh-author-header">
       <!-- MEDICARE: "Licensed Medicare Broker" | ACA: "Licensed Health Insurance Advisor" -->
-      <h2 style="font-family:Fraunces,Georgia,serif;font-size:26px;font-weight:700;color:#fff !important;margin:0 0 8px;">Robert Simm, [MEDICARE: Licensed Medicare Broker | ACA: Licensed Health Insurance Advisor]</h2>
-      <p style="font-size:15px;color:rgba(255,255,255,.9) !important;margin:0 0 6px;max-width:none;">NC License #10447418 &middot; NPN #10447418 &middot; AHIP Certified</p>
-      <p style="font-size:15px;color:rgba(255,255,255,.9) !important;margin:0 0 6px;max-width:none;">12+ Years &middot; 500+ NC Families &middot; Your Data Never Shared</p>
+      <h2>Robert Simm, [MEDICARE: Licensed Medicare Broker | ACA: Licensed Health Insurance Advisor]</h2>
+      <p>NC License #10447418 &middot; NPN #10447418 &middot; AHIP Certified</p>
+      <p>12+ Years &middot; 500+ NC Families &middot; Your Data Never Shared</p>
       <div class="gh-author-contact-row">
         <span>📞 <a href="tel:828-761-3326">828-761-3326</a></span>
         <span>📍 2731 Meridian Pkwy, Durham, NC 27713</span>

@@ -3,6 +3,7 @@
 import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react';
 import { getFromStorage, saveToStorage } from '@/lib/utils';
 import { scan67 } from '@/lib/scan67';
+import { setHTML as idbSetHTML, getHTML as idbGetHTML, getAllSlugs as idbGetAllSlugs } from '@/lib/htmlStore';
 import type { TabId } from '@/types';
 
 // ── AEO Pipeline Entry ──
@@ -17,6 +18,17 @@ export interface AeoPipelineEntry {
   socialDone?: boolean;
   socialDoneAt?: string;
   indexedAt?: string;
+}
+
+// ── Page Status Tracker Entry ──
+export interface PageTrackerEntry {
+  id: string;
+  slug: string;
+  title: string;
+  type: 'existing' | 'aeo';
+  status: string;
+  addedAt: string;
+  updatedAt?: string;
 }
 
 // ── Daily KPI ──
@@ -72,6 +84,8 @@ const LS_AEO_SCORES = 'gh-cc-aeo-scores';
 const LS_WEEKLY_PERF = 'gh-cc-weekly-perf';
 const LS_GA4_TOKEN = 'gh-cc-ga4-token';
 const LS_CM_ATTRIBUTIONS = 'gh-cc-cm-attributions';
+const LS_PAGE_TRACKER = 'gh-cc-page-tracker';
+const LS_SCAN_SCORES = 'gh-cc-scan-scores';
 
 // ── Context ──
 interface AppState {
@@ -98,8 +112,14 @@ interface AppState {
   savedHTML: Record<string, string>;
   setSavedHTML: React.Dispatch<React.SetStateAction<Record<string, string>>>;
 
-  // fetchAndScanPage
+  // Persisted scan scores per slug (survives refresh)
+  scanScores: Record<string, { score: number; total: number; pct: number; scannedAt: string }>;
+
+  // fetchAndScanPage — fetches live page HTML, scans it, and persists to IndexedDB
   fetchAndScanPage: (slug: string) => Promise<{ success: boolean; html?: string; scan?: ReturnType<typeof scan67> }>;
+
+  // loadHTMLFromStore — async load of saved HTML from IndexedDB by slug
+  loadHTMLFromStore: (slug: string) => Promise<string | null>;
 
   // Daily KPIs
   dailyKPIs: Record<string, DailyKPI>;
@@ -132,6 +152,21 @@ interface AppState {
   // Citation Monitor attributions
   cmAttributions: Record<string, string[]>;
   setCmAttributions: React.Dispatch<React.SetStateAction<Record<string, string[]>>>;
+
+  // Page Status Tracker
+  pageTracker: PageTrackerEntry[];
+  addPageToTracker: (entry: PageTrackerEntry) => void;
+  updatePageStatus: (id: string, status: string) => void;
+  removePageFromTracker: (id: string) => void;
+
+  // Task completion state (shared across Architecture + Optimize)
+  taskDone: Record<string, number>;
+  taskIsDone: (id: string) => boolean;
+  taskToggle: (id: string) => void;
+  taskNotes: Record<string, string>;
+  taskGetNote: (id: string) => string;
+  taskSetNote: (id: string, value: string) => void;
+  taskRecentId: string | null;
 }
 
 const AppContext = createContext<AppState | null>(null);
@@ -148,7 +183,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [theme, setTheme] = useState<'dark' | 'light'>(() => getFromStorage(LS_THEME, 'dark') as 'dark' | 'light');
   const [aeoPipeline, setAeoPipeline] = useState<AeoPipelineEntry[]>(() => getFromStorage(LS_PIPELINE, []));
   const [focusClusterId, setFocusClusterIdRaw] = useState<string | null>(() => getFromStorage(LS_FOCUS_CLUSTER, null));
-  const [savedHTML, setSavedHTML] = useState<Record<string, string>>(() => getFromStorage(LS_SAVED_HTML, {}));
+  const [savedHTML, setSavedHTML] = useState<Record<string, string>>({});
+  const [scanScores, setScanScores] = useState<Record<string, { score: number; total: number; pct: number; scannedAt: string }>>(() => getFromStorage(LS_SCAN_SCORES, {}));
   const [dailyKPIs, setDailyKPIs] = useState<Record<string, DailyKPI>>(() => getFromStorage(LS_DAILY_KPI, {}));
   const [perfGoals, setPerfGoals] = useState<PerfGoals>(() => getFromStorage(LS_PERF_GOALS, { impressions: 5000, clicks: 50, calls: 10 }));
   const [projLevers, setProjLevers] = useState<ProjLevers>(() => getFromStorage(LS_PROJ_LEVERS, { pagesPublished: 0, builderOptimized: 0, backlinks: 0, aeoImprovement: 0, adsbudget: 0 }));
@@ -157,12 +193,17 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [weeklyPerfData, setWeeklyPerfData] = useState<WeeklyPerfEntry[]>(() => getFromStorage(LS_WEEKLY_PERF, []));
   const [ga4Token, setGa4Token] = useState<string | null>(() => getFromStorage(LS_GA4_TOKEN, null));
   const [cmAttributions, setCmAttributions] = useState<Record<string, string[]>>(() => getFromStorage(LS_CM_ATTRIBUTIONS, {}));
+  const [pageTracker, setPageTracker] = useState<PageTrackerEntry[]>(() => getFromStorage(LS_PAGE_TRACKER, []));
+
+  // Task completion state (was in useTaskState hook — now shared via context)
+  const [taskDone, setTaskDone] = useState<Record<string, number>>(() => getFromStorage('gh-cc-done', {}));
+  const [taskNotes, setTaskNotes] = useState<Record<string, string>>(() => getFromStorage('gh-cc-notes', {}));
+  const [taskRecentId, setTaskRecentId] = useState<string | null>(null);
 
   // Persist all shared state
   useEffect(() => { saveToStorage(LS_PIPELINE, aeoPipeline); }, [aeoPipeline]);
   useEffect(() => { saveToStorage(LS_THEME, theme); }, [theme]);
   useEffect(() => { saveToStorage(LS_FOCUS_CLUSTER, focusClusterId); }, [focusClusterId]);
-  useEffect(() => { saveToStorage(LS_SAVED_HTML, savedHTML); }, [savedHTML]);
   useEffect(() => { saveToStorage(LS_DAILY_KPI, dailyKPIs); }, [dailyKPIs]);
   useEffect(() => { saveToStorage(LS_PERF_GOALS, perfGoals); }, [perfGoals]);
   useEffect(() => { saveToStorage(LS_PROJ_LEVERS, projLevers); }, [projLevers]);
@@ -171,6 +212,29 @@ export function AppProvider({ children }: { children: ReactNode }) {
   useEffect(() => { saveToStorage(LS_WEEKLY_PERF, weeklyPerfData); }, [weeklyPerfData]);
   useEffect(() => { if (ga4Token) saveToStorage(LS_GA4_TOKEN, ga4Token); }, [ga4Token]);
   useEffect(() => { saveToStorage(LS_CM_ATTRIBUTIONS, cmAttributions); }, [cmAttributions]);
+  useEffect(() => { saveToStorage(LS_PAGE_TRACKER, pageTracker); }, [pageTracker]);
+  useEffect(() => { saveToStorage('gh-cc-done', taskDone); }, [taskDone]);
+  useEffect(() => { saveToStorage('gh-cc-notes', taskNotes); }, [taskNotes]);
+  useEffect(() => { saveToStorage(LS_SCAN_SCORES, scanScores); }, [scanScores]);
+
+  // Hydrate savedHTML map from IndexedDB on mount so the UI knows which pages
+  // have been previously fetched (the actual HTML stays in IndexedDB; this map
+  // is just a presence indicator + small in-memory cache for the current session).
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const slugs = await idbGetAllSlugs();
+        if (cancelled) return;
+        const presence: Record<string, string> = {};
+        for (const s of slugs) presence[s] = '__indexeddb__';
+        setSavedHTML((prev) => ({ ...presence, ...prev }));
+      } catch (err) {
+        console.warn('[AppState] Failed to hydrate savedHTML from IndexedDB:', err);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
 
   // Theme class on body
   useEffect(() => {
@@ -208,27 +272,124 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   // fetchAndScanPage — shared function used by Optimize + Page Builder
   const fetchAndScanPage = useCallback(async (slug: string) => {
-    try {
-      const resp = await fetch(`https://generationhealth.me/${slug}/`);
-      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-      const html = await resp.text();
-      // Save HTML
-      setSavedHTML((prev) => ({ ...prev, [slug]: html }));
-      // Scan
+    const cleanSlug = slug.replace(/^\/+|\/+$/g, '');
+    const pageUrl = `https://generationhealth.me/${cleanSlug}/`;
+
+    const processHtml = async (html: string) => {
       const result = scan67(html);
-      return { success: true, html, scan: result };
-    } catch {
+      setScanScores((prev) => ({
+        ...prev,
+        [cleanSlug]: {
+          score: result.score,
+          total: result.total,
+          pct: result.pct,
+          scannedAt: new Date().toISOString(),
+        },
+      }));
+      setSavedHTML((prev) => ({ ...prev, [cleanSlug]: html }));
       try {
-        const resp2 = await fetch(`https://generationhealth.me/${slug}`);
-        if (!resp2.ok) throw new Error(`HTTP ${resp2.status}`);
-        const html = await resp2.text();
-        setSavedHTML((prev) => ({ ...prev, [slug]: html }));
-        const result = scan67(html);
-        return { success: true, html, scan: result };
-      } catch {
-        return { success: false };
+        await idbSetHTML(cleanSlug, html);
+      } catch (err) {
+        console.warn(`[fetchAndScanPage] IndexedDB write failed for ${cleanSlug}:`, err);
       }
+      try {
+        const existing = JSON.parse(localStorage.getItem('gh-cc-saved-html') || '{}');
+        existing[cleanSlug] = html;
+        localStorage.setItem('gh-cc-saved-html', JSON.stringify(existing));
+      } catch {
+        // QuotaExceededError — IndexedDB is source of truth, ignore
+      }
+      return { success: true as const, html, scan: result };
+    };
+
+    // Strategy 1: Direct fetch (works if WP has CORS headers)
+    try {
+      const resp = await fetch(pageUrl, { mode: 'cors' });
+      if (resp.ok) {
+        const html = await resp.text();
+        if (html.length > 500) return await processHtml(html);
+      }
+    } catch { /* CORS blocked — expected */ }
+
+    // Strategy 2: corsproxy.io (reliable CORS proxy)
+    try {
+      const proxyResp = await fetch(`https://corsproxy.io/?${encodeURIComponent(pageUrl)}`);
+      if (proxyResp.ok) {
+        const html = await proxyResp.text();
+        if (html.length > 500) return await processHtml(html);
+      }
+    } catch { /* try next */ }
+
+    // Strategy 3: allorigins fallback
+    try {
+      const r = await fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent(pageUrl)}`);
+      if (r.ok) {
+        const html = await r.text();
+        if (html.length > 500) return await processHtml(html);
+      }
+    } catch { /* try next */ }
+
+    // Strategy 4: WP REST API (content only — last resort)
+    try {
+      const wpResp = await fetch(`https://generationhealth.me/wp-json/wp/v2/pages?slug=${encodeURIComponent(cleanSlug)}&_fields=content`);
+      if (wpResp.ok) {
+        const wpPages = await wpResp.json();
+        if (Array.isArray(wpPages) && wpPages.length > 0 && wpPages[0]?.content?.rendered) {
+          return await processHtml(wpPages[0].content.rendered);
+        }
+      }
+    } catch { /* exhausted */ }
+
+    console.warn(`[fetchAndScanPage] All strategies failed for: ${cleanSlug}`);
+    return { success: false as const };
+  }, []);
+
+  // loadHTMLFromStore — async read from IndexedDB by slug. Used by Page Builder
+  // and other consumers that need the full HTML payload (not just presence).
+  const loadHTMLFromStore = useCallback(async (slug: string): Promise<string | null> => {
+    const cleanSlug = slug.replace(/^\/+|\/+$/g, '');
+    try {
+      const html = await idbGetHTML(cleanSlug);
+      if (html) {
+        setSavedHTML((prev) => ({ ...prev, [cleanSlug]: html }));
+      }
+      return html;
+    } catch (err) {
+      console.warn(`[loadHTMLFromStore] Failed for ${cleanSlug}:`, err);
+      return null;
     }
+  }, []);
+
+  // Page tracker callbacks
+  const addPageToTracker = useCallback((entry: PageTrackerEntry) => {
+    setPageTracker((prev) => {
+      if (prev.find((e) => e.id === entry.id)) return prev;
+      return [...prev, entry];
+    });
+  }, []);
+
+  const updatePageStatus = useCallback((id: string, status: string) => {
+    setPageTracker((prev) => prev.map((e) => e.id === id ? { ...e, status, updatedAt: new Date().toISOString() } : e));
+  }, []);
+
+  const removePageFromTracker = useCallback((id: string) => {
+    setPageTracker((prev) => prev.filter((e) => e.id !== id));
+  }, []);
+
+  // Task state callbacks
+  const taskIsDone = useCallback((id: string) => !!taskDone[id], [taskDone]);
+  const taskToggle = useCallback((id: string) => {
+    setTaskDone((prev) => {
+      const next = { ...prev };
+      if (next[id]) { delete next[id]; } else { next[id] = Date.now(); }
+      return next;
+    });
+    setTaskRecentId(id);
+    setTimeout(() => setTaskRecentId(null), 1200);
+  }, []);
+  const taskGetNote = useCallback((id: string) => taskNotes[id] || '', [taskNotes]);
+  const taskSetNote = useCallback((id: string, value: string) => {
+    setTaskNotes((prev) => ({ ...prev, [id]: value }));
   }, []);
 
   return (
@@ -238,7 +399,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
       aeoPipeline, setAeoPipeline, addToPipeline,
       focusClusterId, setFocusClusterId,
       savedHTML, setSavedHTML,
+      scanScores,
       fetchAndScanPage,
+      loadHTMLFromStore,
       dailyKPIs, setDailyKPI,
       perfGoals, setPerfGoals,
       projLevers, setProjLevers,
@@ -247,6 +410,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       weeklyPerfData, addWeeklyPerf,
       ga4Token, setGa4Token,
       cmAttributions, setCmAttributions,
+      pageTracker, addPageToTracker, updatePageStatus, removePageFromTracker,
+      taskDone, taskIsDone, taskToggle, taskNotes, taskGetNote, taskSetNote, taskRecentId,
     }}>
       {children}
     </AppContext.Provider>
