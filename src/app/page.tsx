@@ -1,5 +1,4 @@
 'use client';
-
 import { AppProvider, useAppState } from '@/lib/AppState';
 import Header from '@/components/layout/Header';
 import PerformancePanel from '@/components/performance/PerformancePanel';
@@ -13,11 +12,12 @@ import PageBuilderPanel from '@/components/pagebuilder/PageBuilderPanel';
 
 function Dashboard() {
   const { activeTab, setActiveTab, theme, toggleTheme } = useAppState();
-
   return (
     <div className="min-h-screen">
       <Header activeTab={activeTab} onTabChange={setActiveTab} theme={theme} onToggleTheme={toggleTheme} />
-      <main className="max-w-[1400px] mx-auto px-6 py-8">
+      <main className={activeTab === 'pageBuilder'
+        ? 'overflow-hidden'
+        : 'max-w-[1400px] mx-auto px-6 py-8'}>
         {activeTab === 'performance' && <PerformancePanel />}
         {activeTab === 'keywords' && <KeywordWarRoom />}
         {activeTab === 'architecture' && <ArchitecturePanel />}
