@@ -238,8 +238,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   // Theme class on body
   useEffect(() => {
-    document.body.classList.toggle('light', theme === 'light');
-    document.body.classList.toggle('dark', theme === 'dark');
+    document.documentElement.classList.toggle('light', theme === 'light');
+    document.documentElement.classList.toggle('dark', theme === 'dark');
   }, [theme]);
 
   const toggleTheme = useCallback(() => setTheme((t) => t === 'dark' ? 'light' : 'dark'), []);
