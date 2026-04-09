@@ -47,9 +47,9 @@ a{text-decoration:none;}
 
 /* ── Hero ── */
 .hero{background:#0d2f5e;padding:60px 24px 56px;text-align:center;}
-.hero-eyebrow{font-size:10px;font-weight:700;color:#83f0f9;letter-spacing:0.16em;text-transform:uppercase;margin-bottom:22px;}
-.hero-h1{font-family:-apple-system,'SF Pro Display',sans-serif;font-size:clamp(32px,5vw,52px);font-weight:700;line-height:1.06;letter-spacing:-0.03em;color:#fff;margin-bottom:18px;max-width:720px;margin-left:auto;margin-right:auto;}
-.hero-sub{font-size:17px;font-weight:400;color:rgba(255,255,255,0.65);margin-bottom:42px;max-width:460px;margin-left:auto;margin-right:auto;line-height:1.6;}
+.hero-eyebrow{font-size:10px;font-weight:700;color:#83f0f9 !important;letter-spacing:0.16em;text-transform:uppercase;margin-bottom:22px;}
+.hero-h1{font-family:-apple-system,'SF Pro Display',sans-serif;font-size:clamp(32px,5vw,52px);font-weight:700;line-height:1.06;letter-spacing:-0.03em;color:#fff !important;margin-bottom:18px;max-width:720px;margin-left:auto;margin-right:auto;}
+.hero-sub{font-size:17px;font-weight:400;color:rgba(255,255,255,0.65) !important;margin-bottom:42px;max-width:460px;margin-left:auto;margin-right:auto;line-height:1.6;}
 .split-pill{display:inline-flex;border-radius:100px;overflow:hidden;background:#fff;}
 .pill-left{background:#fff;padding:16px 28px;text-align:left;min-width:220px;}
 .pill-left-q{font-size:9px;font-weight:700;color:#0d2f5e;text-transform:uppercase;letter-spacing:0.12em;margin-bottom:5px;}
@@ -113,7 +113,7 @@ a{text-decoration:none;}
 .block-h3{font-size:13px;font-weight:600;color:#6e6e73;text-align:center;margin-bottom:16px;text-transform:uppercase;letter-spacing:0.08em;}
 .guide-pill{font-size:13px;color:#0071e3;padding:7px 16px;background:#f5f5f7;border-radius:100px;border:0.5px solid #d2d2d7;}
 .county-pill{font-size:13px;color:#1d1d1f;padding:7px 16px;background:#f5f5f7;border-radius:100px;border:0.5px solid #d2d2d7;}
-.county-pill-all{font-size:13px;color:#fff;padding:7px 16px;background:#0071e3;border-radius:100px;font-weight:600;}
+.county-pill-all{font-size:13px;color:#fff !important;padding:7px 16px;background:#0071e3;border-radius:100px;font-weight:600;}
 
 /* ── Credentials ── */
 .creds-section{padding:32px 24px;border-top:0.5px solid #e5e5ea;text-align:center;}
@@ -156,9 +156,9 @@ a{text-decoration:none;}
 </header>
 
 <div class="hero">
-  <div class="hero-eyebrow">Medicare Broker &middot; {{county}} NC</div>
-  <h1 class="hero-h1">Which plans actually cover your {{health_system}} doctors?</h1>
-  <p class="hero-sub">I check family history and health risks &mdash; then find the plan that covers what you might need next year, not just today.</p>
+  <div class="hero-eyebrow" style="color:#83f0f9 !important;">Medicare Broker &middot; {{county}} NC</div>
+  <h1 class="hero-h1" style="color:#fff !important;">Which plans actually cover your {{health_system}} doctors?</h1>
+  <p class="hero-sub" style="color:rgba(255,255,255,0.65) !important;">I check family history and health risks &mdash; then find the plan that covers what you might need next year, not just today.</p>
   <div class="split-pill">
     <div class="pill-left">
       <div class="pill-left-q">{{health_system}} covered?</div>
@@ -302,7 +302,7 @@ a{text-decoration:none;}
       <div class="block-h3">Get help in nearby NC counties</div>
       <div class="pills-wrap">
         [COUNTY-PILLS]
-        <a class="county-pill-all" href="https://generationhealth.me/medicare-broker-nc-google-ads/">All NC Counties &rarr;</a>
+        <a class="county-pill-all" href="https://generationhealth.me/medicare-broker-nc-google-ads/" style="color:#fff !important;background:#0071e3 !important;">All NC Counties &rarr;</a>
       </div>
     </div>
   </div>
