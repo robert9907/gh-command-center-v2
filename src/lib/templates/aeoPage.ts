@@ -139,6 +139,10 @@ a{text-decoration:none;}
   .trust-strip{gap:2px;}
   .trust-item{padding:0 6px;font-size:11px;}
 }
+@media(max-width:640px){
+  .final-cta-desktop{display:none !important;}
+  .final-cta-mobile{display:block !important;}
+}
 </style>
 </head>
 <body>
@@ -164,10 +168,10 @@ a{text-decoration:none;}
       <div class="pill-left-q">{{health_system}} covered?</div>
       <div class="pill-left-a">Your specialist might not be.</div>
     </div>
-    <div class="pill-right">
+    <a href="tel:8287613326" class="pill-right" style="text-decoration:none;">
       <div class="pill-right-top">Safe Bet. Call Rob.</div>
       <div class="pill-right-num">(828) 761-3326</div>
-    </div>
+    </a>
   </div>
 </div>
 
@@ -318,25 +322,54 @@ a{text-decoration:none;}
   </div>
 </div>
 
-<div class="final-cta">
+<div class="final-cta" style="background:#0d2f5e !important;padding:72px 24px !important;">
   <div class="inner">
-    <div class="final-h2">10 minutes. You'll know exactly where you stand.</div>
-    <div class="final-sub">Rob Simm &middot; Licensed NC Medicare Broker &middot; NPN #10447418</div>
-    <div class="split-pill">
-      <div class="pill-left">
-        <div class="pill-left-q">{{health_system}} covered?</div>
-        <div class="pill-left-a">Your specialist might not be.</div>
+
+    <!-- Desktop: 2-column 35/65 layout -->
+    <div class="final-cta-desktop" style="display:grid;grid-template-columns:35% 1fr;gap:48px;align-items:start;max-width:960px;margin:0 auto;">
+      <div style="text-align:left;">
+        <div style="font-family:-apple-system,'SF Pro Display',sans-serif;font-size:clamp(22px,3vw,28px) !important;font-weight:700 !important;color:#fff !important;line-height:1.15 !important;letter-spacing:-0.02em !important;margin-bottom:10px !important;">10 minutes. You&#39;ll know exactly where you stand.</div>
+        <div style="font-size:13px !important;color:rgba(255,255,255,0.45) !important;line-height:1.6 !important;margin-top:10px !important;">Rob Simm &middot; Licensed NC Medicare Broker &middot; NPN #10447418</div>
       </div>
-      <div class="pill-right">
-        <div class="pill-right-top">Safe Bet. Call Rob.</div>
-        <div class="pill-right-num">(828) 761-3326</div>
+      <div style="display:flex;flex-direction:column;gap:10px;">
+        <a href="tel:8287613326" style="display:flex !important;flex-direction:column !important;align-items:center !important;justify-content:center !important;padding:18px 28px !important;background:#83f0f9 !important;border-radius:100px !important;text-decoration:none !important;">
+          <div style="font-size:10px !important;font-weight:700 !important;color:#0d2f5e !important;letter-spacing:0.1em !important;text-transform:uppercase !important;margin-bottom:3px !important;">Call Rob directly</div>
+          <div style="font-size:20px !important;font-weight:700 !important;color:#0d2f5e !important;letter-spacing:-0.01em !important;">(828) 761-3326</div>
+          <div style="font-size:11px !important;color:rgba(13,47,94,0.55) !important;margin-top:2px !important;">Mon&ndash;Fri 9am&ndash;7pm &middot; Sat 12pm&ndash;4pm</div>
+        </a>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <div style="flex:1;height:1px;background:rgba(255,255,255,0.08);"></div>
+          <div style="font-size:10px !important;color:rgba(255,255,255,0.25) !important;letter-spacing:0.08em !important;text-transform:uppercase !important;">or</div>
+          <div style="flex:1;height:1px;background:rgba(255,255,255,0.08);"></div>
+        </div>
+        <a href="sms:8287613326" style="display:flex !important;align-items:center !important;justify-content:center !important;padding:15px 28px !important;background:rgba(255,255,255,0.06) !important;border:1.5px solid rgba(255,255,255,0.18) !important;border-radius:100px !important;color:#fff !important;font-size:14px !important;font-weight:600 !important;text-decoration:none !important;">Text Us</a>
+        <a href="https://calendly.com/robert-generationhealth/new-meeting" style="display:flex !important;align-items:center !important;justify-content:center !important;padding:15px 28px !important;background:rgba(255,255,255,0.06) !important;border:1.5px solid rgba(255,255,255,0.18) !important;border-radius:100px !important;color:#fff !important;font-size:14px !important;font-weight:600 !important;text-decoration:none !important;">Book a Free Call</a>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <div style="flex:1;height:1px;background:rgba(255,255,255,0.08);"></div>
+          <div style="font-size:10px !important;color:rgba(255,255,255,0.25) !important;letter-spacing:0.08em !important;text-transform:uppercase !important;">compare plans</div>
+          <div style="flex:1;height:1px;background:rgba(255,255,255,0.08);"></div>
+        </div>
+        <a href="https://www.sunfirematrix.com/app/consumer/medicareadvocates/10447418/#/" style="display:flex !important;align-items:center !important;justify-content:center !important;padding:15px 28px !important;background:rgba(131,240,249,0.08) !important;border:1.5px solid rgba(131,240,249,0.25) !important;border-radius:100px !important;color:#83f0f9 !important;font-size:14px !important;font-weight:600 !important;text-decoration:none !important;">Compare Medicare Plans &mdash; SunFire &rarr;</a>
+        <div style="font-size:10px !important;font-weight:700 !important;color:rgba(255,255,255,0.45) !important;text-align:center !important;letter-spacing:0.07em !important;text-transform:uppercase !important;margin-top:4px !important;">No pressure &middot; No sales pitch &middot; Your data never sold</div>
       </div>
     </div>
-    <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-top:24px;">
-      <a href="https://www.sunfirematrix.com/app/consumer/medicareadvocates/10447418/#/" style="display:inline-flex;align-items:center;gap:8px;padding:12px 22px;background:rgba(255,255,255,0.1);border:1.5px solid rgba(255,255,255,0.25);border-radius:100px;color:#fff !important;font-size:14px;font-weight:600;text-decoration:none;">Compare Plans — SunFire</a>
-      <a href="https://www.healthsherpa.com/?_agent_id=robert-simm" style="display:inline-flex;align-items:center;gap:8px;padding:12px 22px;background:rgba(255,255,255,0.1);border:1.5px solid rgba(255,255,255,0.25);border-radius:100px;color:#fff !important;font-size:14px;font-weight:600;text-decoration:none;">ACA Plans — HealthSherpa</a>
+
+    <!-- Mobile: stacked layout -->
+    <div class="final-cta-mobile" style="display:none;max-width:480px;margin:0 auto;">
+      <div style="font-family:-apple-system,'SF Pro Display',sans-serif;font-size:22px !important;font-weight:700 !important;color:#fff !important;line-height:1.2 !important;letter-spacing:-0.02em !important;margin-bottom:8px !important;text-align:center !important;">10 minutes. You&#39;ll know where you stand.</div>
+      <div style="font-size:13px !important;color:rgba(255,255,255,0.45) !important;text-align:center !important;margin-bottom:24px !important;line-height:1.5 !important;">Rob Simm &middot; Licensed NC Medicare Broker &middot; NPN #10447418</div>
+      <div style="display:flex;flex-direction:column;gap:10px;">
+        <a href="tel:8287613326" style="display:flex !important;flex-direction:column !important;align-items:center !important;padding:16px 20px !important;background:#83f0f9 !important;border-radius:100px !important;text-decoration:none !important;">
+          <div style="font-size:10px !important;font-weight:700 !important;color:#0d2f5e !important;letter-spacing:0.1em !important;text-transform:uppercase !important;margin-bottom:3px !important;">Call Rob directly</div>
+          <div style="font-size:19px !important;font-weight:700 !important;color:#0d2f5e !important;">(828) 761-3326</div>
+        </a>
+        <a href="sms:8287613326" style="display:flex !important;align-items:center !important;justify-content:center !important;padding:14px 20px !important;background:rgba(255,255,255,0.06) !important;border:1.5px solid rgba(255,255,255,0.18) !important;border-radius:100px !important;color:#fff !important;font-size:14px !important;font-weight:600 !important;text-decoration:none !important;">Text Us</a>
+        <a href="https://calendly.com/robert-generationhealth/new-meeting" style="display:flex !important;align-items:center !important;justify-content:center !important;padding:14px 20px !important;background:rgba(255,255,255,0.06) !important;border:1.5px solid rgba(255,255,255,0.18) !important;border-radius:100px !important;color:#fff !important;font-size:14px !important;font-weight:600 !important;text-decoration:none !important;">Book a Free Call</a>
+        <a href="https://www.sunfirematrix.com/app/consumer/medicareadvocates/10447418/#/" style="display:flex !important;align-items:center !important;justify-content:center !important;padding:14px 20px !important;background:rgba(131,240,249,0.08) !important;border:1.5px solid rgba(131,240,249,0.25) !important;border-radius:100px !important;color:#83f0f9 !important;font-size:14px !important;font-weight:600 !important;text-decoration:none !important;">Compare Plans &mdash; SunFire &rarr;</a>
+      </div>
+      <div style="font-size:10px !important;font-weight:700 !important;color:rgba(255,255,255,0.45) !important;text-align:center !important;letter-spacing:0.07em !important;text-transform:uppercase !important;margin-top:14px !important;">No pressure &middot; No sales pitch &middot; Your data never sold</div>
     </div>
-    <p class="final-micro" style="color:rgba(255,255,255,0.6) !important;">No pressure &middot; No sales pitch &middot; Your data never sold</p>
+
   </div>
 </div>
 
