@@ -36,14 +36,14 @@ body{font-family:-apple-system,'SF Pro Text',BlinkMacSystemFont,sans-serif;backg
 a{text-decoration:none;}
 
 /* ── Header ── */
-.gh-header{background:#fff;border-bottom:1px solid #e5e5ea;padding:12px 24px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;}
+.gh-header{background:#fff;border-bottom:1px solid #e5e5ea;padding:12px 24px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;flex-wrap:wrap;gap:8px;}
 .gh-logo-wrap{display:flex;flex-direction:column;gap:2px;}
 .gh-logo-top{display:flex;align-items:center;gap:8px;}
 .gh-logo-badge{background:#0071e3;padding:4px 10px;border-radius:5px;font-weight:700;font-size:15px;color:#fff;letter-spacing:-0.02em;}
 .gh-logo-div{width:1px;height:16px;background:#e5e5ea;}
 .gh-logo-name{font-size:14px;font-weight:600;color:#1d1d1f;}
 .gh-logo-sub{font-size:9px;color:#aeaeb2;text-transform:uppercase;letter-spacing:0.5px;}
-.gh-phone{font-size:14px;font-weight:600;color:#0071e3;background:#EFF6FF;padding:8px 16px;border-radius:100px;border:1.5px solid #0071e3;white-space:nowrap;}
+.gh-phone{font-size:14px;font-weight:700;color:#0071e3 !important;background:#EFF6FF !important;padding:10px 20px !important;border-radius:100px !important;border:2px solid #0071e3 !important;white-space:nowrap !important;text-decoration:none !important;display:inline-block !important;}
 
 /* ── Hero ── */
 .hero{background:#0d2f5e;padding:60px 24px 56px;text-align:center;}
@@ -130,6 +130,9 @@ a{text-decoration:none;}
 
 /* ── Responsive ── */
 @media(max-width:640px){
+  .gh-header{flex-direction:column;align-items:flex-start;gap:10px;}
+  .gh-phone{align-self:stretch;text-align:center;}
+  
   .fear-grid{grid-template-columns:1fr;}
   .scenario-cards{grid-template-columns:1fr;}
   .compare-table{font-size:12px;}
