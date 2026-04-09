@@ -22,7 +22,6 @@
  *   [RELATED-GUIDE-1] through [RELATED-GUIDE-8]
  *   [COUNTY-PILLS]
  */
-
 export const AEO_PAGE_TEMPLATE: string = `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -34,7 +33,6 @@ export const AEO_PAGE_TEMPLATE: string = `<!DOCTYPE html>
 *{margin:0;padding:0;box-sizing:border-box;}
 body{font-family:-apple-system,'SF Pro Text',BlinkMacSystemFont,sans-serif;background:#fff;color:#1d1d1f;font-size:15px;line-height:1.6;-webkit-font-smoothing:antialiased;}
 a{text-decoration:none;}
-
 /* ── Header ── */
 .gh-header{background:#fff;border-bottom:1px solid #e5e5ea;padding:12px 24px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;}
 .gh-logo-wrap{display:flex;flex-direction:column;gap:2px;}
@@ -44,12 +42,12 @@ a{text-decoration:none;}
 .gh-logo-name{font-size:14px;font-weight:600;color:#1d1d1f;}
 .gh-logo-sub{font-size:9px;color:#aeaeb2;text-transform:uppercase;letter-spacing:0.5px;}
 .gh-phone{font-size:14px;font-weight:700;color:#0071e3 !important;background:#EFF6FF !important;padding:10px 20px !important;border-radius:100px !important;border:2px solid #0071e3 !important;white-space:nowrap !important;text-decoration:none !important;display:inline-block !important;}
-
 /* ── Hero ── */
 .hero{background:#0d2f5e;padding:60px 24px 56px;text-align:center;}
 .hero-eyebrow{font-size:10px;font-weight:700;color:#83f0f9 !important;letter-spacing:0.16em;text-transform:uppercase;margin-bottom:22px;}
 .hero-h1{font-family:-apple-system,'SF Pro Display',sans-serif;font-size:clamp(32px,5vw,52px);font-weight:700;line-height:1.06;letter-spacing:-0.03em;color:#fff !important;margin-bottom:18px;max-width:720px;margin-left:auto;margin-right:auto;}
 .hero-sub{font-size:17px;font-weight:400;color:rgba(255,255,255,0.65) !important;margin-bottom:42px;max-width:460px;margin-left:auto;margin-right:auto;line-height:1.6;}
+/* ── Split pill — desktop (side by side) ── */
 .split-pill{display:inline-flex;border-radius:100px;overflow:hidden;background:#fff;}
 .pill-left{background:#fff;padding:16px 28px;text-align:left;min-width:220px;}
 .pill-left-q{font-size:9px;font-weight:700;color:#0d2f5e;text-transform:uppercase;letter-spacing:0.12em;margin-bottom:5px;}
@@ -57,12 +55,10 @@ a{text-decoration:none;}
 .pill-right{background:#83f0f9;padding:16px 28px;text-align:center;min-width:180px;display:flex;flex-direction:column;align-items:center;justify-content:center;}
 .pill-right-top{font-size:14px;font-weight:700;color:#0d2f5e;margin-bottom:3px;}
 .pill-right-num{font-size:15px;font-weight:700;color:#0d2f5e;letter-spacing:-0.01em;}
-
 /* ── Trust strip ── */
 .trust-strip{background:#fff;border-bottom:1px solid #f0f0f0;padding:15px 24px;display:flex;justify-content:center;align-items:center;flex-wrap:wrap;gap:4px;}
 .trust-item{font-size:12px;color:#6e6e73;display:flex;align-items:center;gap:6px;padding:0 10px;}
 .trust-bullet{color:#1d1d1f;font-size:7px;}
-
 /* ── Sections ── */
 .section-light{padding:64px 24px;background:#f5f5f7;}
 .section-white{padding:64px 24px;background:#fff;}
@@ -73,14 +69,12 @@ a{text-decoration:none;}
 .section-h2{font-family:-apple-system,'SF Pro Display',sans-serif;font-size:clamp(22px,3vw,32px);font-weight:700;letter-spacing:-0.02em;color:#1d1d1f;margin-bottom:10px;max-width:600px;}
 .section-h2-white{font-family:-apple-system,'SF Pro Display',sans-serif;font-size:clamp(22px,3vw,32px);font-weight:700;letter-spacing:-0.02em;color:#fff;margin-bottom:32px;}
 .section-intro{font-size:15px;color:#6e6e73;margin-bottom:32px;max-width:560px;}
-
 /* ── Fear grid ── */
 .fear-grid{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:#d2d2d7;border-radius:16px;overflow:hidden;}
 .fear-card{background:#fff;padding:32px 28px;}
 .fear-num{font-size:40px;font-weight:700;color:#e5e5ea;letter-spacing:-0.04em;margin-bottom:14px;font-family:-apple-system,'SF Pro Display',sans-serif;line-height:1;}
 .fear-q{font-size:15px;font-weight:600;color:#1d1d1f;line-height:1.4;margin-bottom:8px;}
 .fear-sub{font-size:13px;color:#6e6e73;line-height:1.5;}
-
 /* ── Comparison table ── */
 .compare-table{width:100%;border-collapse:collapse;table-layout:fixed;}
 .compare-table th{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;padding:12px 18px;border-bottom:1px solid rgba(255,255,255,0.12);text-align:left;width:33.33%;}
@@ -92,7 +86,6 @@ a{text-decoration:none;}
 .compare-table td:nth-child(2){font-weight:500;color:#fff;}
 .compare-table td:nth-child(3){font-weight:900;color:#fff;}
 .compare-table tr:last-child td{border-bottom:none;}
-
 /* ── Scenario cards ── */
 .scenario-cards{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
 .scenario-card{background:#0d2f5e;border-radius:16px;padding:28px 24px;}
@@ -103,44 +96,42 @@ a{text-decoration:none;}
 .scenario-amount-wrong{color:#f87171;}
 .scenario-amount-right{color:#4ade80;}
 .scenario-desc{font-size:13px;color:rgba(255,255,255,0.6);line-height:1.6;}
-
 /* ── Honesty section ── */
 .honesty-h2{font-family:-apple-system,'SF Pro Display',sans-serif;font-size:clamp(20px,3vw,28px);font-weight:700;color:#1d1d1f;margin-bottom:16px;letter-spacing:-0.02em;max-width:600px;margin-left:auto;margin-right:auto;text-align:center;}
 .honesty-body{font-size:15px;color:#6e6e73;line-height:1.7;max-width:560px;margin:0 auto;text-align:center;}
-
 /* ── Pills ── */
 .pills-wrap{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;}
 .block-h3{font-size:13px;font-weight:600;color:#6e6e73;text-align:center;margin-bottom:16px;text-transform:uppercase;letter-spacing:0.08em;}
 .guide-pill{font-size:13px;color:#0071e3;padding:7px 16px;background:#f5f5f7;border-radius:100px;border:0.5px solid #d2d2d7;}
 .county-pill{font-size:13px;color:#1d1d1f;padding:7px 16px;background:#f5f5f7;border-radius:100px;border:0.5px solid #d2d2d7;}
 .county-pill-all{font-size:13px;color:#fff !important;padding:7px 16px;background:#0071e3;border-radius:100px;font-weight:600;}
-
 /* ── Credentials ── */
 .creds-section{padding:32px 24px;border-top:0.5px solid #e5e5ea;text-align:center;}
 .creds-name{font-size:16px;font-weight:600;color:#1d1d1f;margin-bottom:6px;}
 .creds-line{font-size:12px;color:#6e6e73;margin-bottom:4px;}
 .creds-verify{color:#0071e3;}
 .eeat-stamp{font-size:11px;color:#aeaeb2;margin-top:16px;padding-top:16px;border-top:0.5px solid #e5e5ea;}
-
 /* ── Final CTA ── */
 .final-cta{background:#0d2f5e;padding:72px 24px;text-align:center;}
 .final-h2{font-family:-apple-system,'SF Pro Display',sans-serif;font-size:clamp(24px,3.5vw,40px);font-weight:700;color:#fff;margin-bottom:10px;letter-spacing:-0.02em;}
 .final-sub{font-size:15px;color:rgba(255,255,255,0.5);margin-bottom:36px;font-weight:400;}
 .final-micro{font-size:11px;color:rgba(255,255,255,0.3);margin-top:20px;letter-spacing:0.06em;text-transform:uppercase;}
-
 /* ── Responsive ── */
 @media(max-width:640px){
-  .split-pill{border-radius:24px !important;display:flex !important;flex-direction:column !important;width:100% !important;max-width:360px !important;}
-  .pill-left,.pill-right{width:100% !important;min-width:0 !important;text-align:center !important;border-radius:0 !important;}
-  .pill-left{border-radius:24px 24px 0 0 !important;padding:18px 24px !important;}
-  .pill-right{border-radius:0 0 24px 24px !important;padding:18px 24px !important;}
-  
+  /* Split pill — mobile: stacked slim pill, wrapper does all rounding */
+  .split-pill{display:flex !important;flex-direction:column !important;border-radius:30px !important;overflow:hidden !important;width:calc(100% - 28px) !important;max-width:400px !important;margin-left:auto !important;margin-right:auto !important;}
+  .pill-left{border-radius:0 !important;padding:7px 20px !important;text-align:center !important;min-width:0 !important;display:flex !important;align-items:center !important;justify-content:center !important;gap:8px !important;}
+  .pill-left-q{font-size:9px !important;font-weight:700 !important;color:#8a8a8e !important;text-transform:uppercase !important;letter-spacing:0.1em !important;margin-bottom:0 !important;}
+  .pill-left-divider{display:inline-block !important;width:1px !important;height:12px !important;background:#e5e5ea !important;margin:0 !important;}
+  .pill-left-a{font-size:12px !important;font-weight:700 !important;color:#0d2f5e !important;line-height:1.2 !important;}
+  .pill-right{border-radius:0 !important;padding:11px 20px !important;min-width:0 !important;}
+  .pill-right-top{font-size:11px !important;letter-spacing:0.1em !important;text-transform:uppercase !important;margin-bottom:2px !important;}
+  .pill-right-num{font-size:17px !important;}
+
   .fear-grid{grid-template-columns:1fr;}
   .scenario-cards{grid-template-columns:1fr;}
   .compare-table{font-size:12px;}
   .compare-table th,.compare-table td{padding:10px 10px;}
-  .split-pill{flex-direction:column;border-radius:20px;}
-  .pill-left,.pill-right{min-width:0;width:100%;text-align:center;}
   .trust-strip{gap:2px;}
   .trust-item{padding:0 6px;font-size:11px;}
 }
@@ -151,7 +142,6 @@ a{text-decoration:none;}
 </style>
 </head>
 <body>
-
 <header style="background:#fff !important;border-bottom:1px solid #e5e5ea !important;padding:12px 20px !important;display:flex !important;align-items:center !important;justify-content:space-between !important;position:sticky !important;top:0 !important;z-index:100 !important;">
   <div style="display:flex;flex-direction:column;gap:1px;">
     <div style="background:#0071e3 !important;padding:4px 10px !important;border-radius:5px !important;font-weight:700 !important;font-size:14px !important;color:#fff !important;letter-spacing:-0.02em !important;display:inline-block !important;width:fit-content !important;">GH.me</div>
@@ -160,7 +150,6 @@ a{text-decoration:none;}
   </div>
   <a href="tel:8287613326" style="font-size:14px !important;font-weight:700 !important;color:#0071e3 !important;background:#EFF6FF !important;padding:10px 18px !important;border-radius:100px !important;border:2px solid #0071e3 !important;white-space:nowrap !important;text-decoration:none !important;flex-shrink:0 !important;">(828) 761-3326</a>
 </header>
-
 <div class="hero">
   <div class="hero-eyebrow" style="color:#83f0f9 !important;">Medicare Broker &middot; {{county}} NC</div>
   <h1 class="hero-h1" style="color:#fff !important;">Which plans actually cover your {{health_system}} doctors?</h1>
@@ -168,6 +157,7 @@ a{text-decoration:none;}
   <div class="split-pill">
     <div class="pill-left">
       <div class="pill-left-q">{{health_system}} covered?</div>
+      <span class="pill-left-divider"></span>
       <div class="pill-left-a">Your specialist might not be.</div>
     </div>
     <a href="tel:8287613326" class="pill-right" style="text-decoration:none;">
@@ -176,7 +166,6 @@ a{text-decoration:none;}
     </a>
   </div>
 </div>
-
 <div class="trust-strip">
   <div class="trust-item"><span class="trust-bullet">&#8226;</span> Licensed &middot; NC #10447418</div>
   <div class="trust-item"><span class="trust-bullet">&#8226;</span> Independent &middot; All Carriers</div>
@@ -184,7 +173,6 @@ a{text-decoration:none;}
   <div class="trust-item"><span class="trust-bullet">&#8226;</span> $0 Cost to Compare</div>
   <div class="trust-item"><span class="trust-bullet">&#8226;</span> 500+ NC Families Helped</div>
 </div>
-
 <div class="section-light">
   <div class="inner">
     <div class="section-label">What you're really asking</div>
@@ -214,7 +202,6 @@ a{text-decoration:none;}
     </div>
   </div>
 </div>
-
 <div class="section-dark">
   <div class="inner">
     <div class="section-label-seafoam">The difference</div>
@@ -257,7 +244,6 @@ a{text-decoration:none;}
     </table>
   </div>
 </div>
-
 <div class="section-white">
   <div class="inner">
     <div class="section-label">Real scenario &middot; 2025</div>
@@ -277,7 +263,6 @@ a{text-decoration:none;}
     </div>
   </div>
 </div>
-
 <div class="section-light">
   <div class="inner" style="text-align:center;">
     <div class="section-label" style="text-align:center;">Why I don't lie to you</div>
@@ -285,7 +270,6 @@ a{text-decoration:none;}
     <p class="honesty-body">I get paid the same whether you pick a $0 premium plan or a $150 premium plan. Zero financial incentive to sell you the wrong plan. Call centers get bonuses for enrolling X people in Plan A. I don't. My incentive is to tell you the truth so you refer your friends.</p>
   </div>
 </div>
-
 <div class="section-white" style="padding-top:48px;padding-bottom:32px;border-top:0.5px solid #e5e5ea;">
   <div class="inner">
     <div class="block-h3">Related Medicare guides</div>
@@ -301,7 +285,6 @@ a{text-decoration:none;}
     </div>
   </div>
 </div>
-
 <div class="section-white" style="padding-top:0;padding-bottom:48px;">
   <div class="inner">
     <div style="padding-top:32px;border-top:0.5px solid #e5e5ea;">
@@ -313,7 +296,6 @@ a{text-decoration:none;}
     </div>
   </div>
 </div>
-
 <div class="creds-section">
   <div class="inner">
     <div class="creds-name">Robert Simm, Licensed Medicare Broker</div>
@@ -323,10 +305,8 @@ a{text-decoration:none;}
     <div class="eeat-stamp">Last Updated: April 2026 &nbsp;|&nbsp; Reviewed By: Robert Simm, Licensed Medicare Broker, NC #10447418 &nbsp;|&nbsp; Next Review: October 2026</div>
   </div>
 </div>
-
 <div class="final-cta" style="background:#0d2f5e !important;padding:72px 24px !important;">
   <div class="inner">
-
     <!-- Desktop: 2-column 35/65 layout -->
     <div class="final-cta-desktop" style="display:grid;grid-template-columns:35% 1fr;gap:48px;align-items:start;max-width:960px;margin:0 auto;">
       <div style="text-align:left;">
@@ -355,7 +335,6 @@ a{text-decoration:none;}
         <div style="font-size:10px !important;font-weight:700 !important;color:rgba(255,255,255,0.45) !important;text-align:center !important;letter-spacing:0.07em !important;text-transform:uppercase !important;margin-top:4px !important;">No pressure &middot; No sales pitch &middot; Your data never sold</div>
       </div>
     </div>
-
     <!-- Mobile: stacked layout -->
     <div class="final-cta-mobile" style="display:none;max-width:480px;margin:0 auto;">
       <div style="font-family:-apple-system,'SF Pro Display',sans-serif;font-size:22px !important;font-weight:700 !important;color:#fff !important;line-height:1.2 !important;letter-spacing:-0.02em !important;margin-bottom:8px !important;text-align:center !important;">10 minutes. You&#39;ll know where you stand.</div>
@@ -371,10 +350,8 @@ a{text-decoration:none;}
       </div>
       <div style="font-size:10px !important;font-weight:700 !important;color:rgba(255,255,255,0.45) !important;text-align:center !important;letter-spacing:0.07em !important;text-transform:uppercase !important;margin-top:14px !important;">No pressure &middot; No sales pitch &middot; Your data never sold</div>
     </div>
-
   </div>
 </div>
-
 </body>
 </html>
 `;
