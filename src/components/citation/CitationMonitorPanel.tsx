@@ -271,7 +271,7 @@ function QueueTab({ queue, setQueue, apiKeys }: QueueTabProps) {
   const stats = useMemo(() => {
     const total = queue.length;
     const tested = queue.filter((q) => {
-      const s = (q.citationStatus || {}) as import('@/lib/seedExpansion').CitationStatus;
+      const s = q.citationStatus || {};
       return (
         s.claude !== null ||
         s.chatgpt !== null ||
@@ -280,7 +280,7 @@ function QueueTab({ queue, setQueue, apiKeys }: QueueTabProps) {
       );
     }).length;
     const cited = queue.filter((q) => {
-      const s = (q.citationStatus || {}) as import('@/lib/seedExpansion').CitationStatus;
+      const s = q.citationStatus || {};
       return (
         s.claude === true ||
         s.chatgpt === true ||
@@ -440,7 +440,7 @@ function QueueTab({ queue, setQueue, apiKeys }: QueueTabProps) {
   // tracker, and shows a 2-second toast. On failure: shows the reason in the
   // toast for 3 seconds.
   const handleCopyEmbed = async (query: QueryCandidate) => {
-    const result = buildPageForQuery(query, 'wp-embed');
+    const result = await buildPageForQuery(query, 'wp-embed');
 
     if (!result.ok) {
       setCopyToast(`✗ ${result.failureReason || 'Copy failed'}`);
