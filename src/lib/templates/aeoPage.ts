@@ -130,10 +130,10 @@ a{text-decoration:none;}
 
 /* ── Responsive ── */
 @media(max-width:640px){
-  .split-pill{border-radius:28px !important;display:flex !important;flex-direction:column !important;width:100% !important;max-width:360px !important;}
+  .split-pill{border-radius:24px !important;display:flex !important;flex-direction:column !important;width:100% !important;max-width:360px !important;}
   .pill-left,.pill-right{width:100% !important;min-width:0 !important;text-align:center !important;border-radius:0 !important;}
-  .pill-left{border-radius:28px 28px 0 0 !important;padding:18px 24px !important;}
-  .pill-right{border-radius:0 0 28px 28px !important;padding:18px 24px !important;}
+  .pill-left{border-radius:24px 24px 0 0 !important;padding:18px 24px !important;}
+  .pill-right{border-radius:0 0 24px 24px !important;padding:18px 24px !important;}
   
   .fear-grid{grid-template-columns:1fr;}
   .scenario-cards{grid-template-columns:1fr;}
