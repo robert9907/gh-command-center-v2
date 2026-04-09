@@ -302,7 +302,7 @@ export default function PageBuilderPanel() {
   const appliedZoneCount = Object.values(zoneApplied).filter(Boolean).length;
 
   return (
-    <div className="flex flex-col" style={{ margin: '-2rem -1.5rem 0', minHeight: '100vh' }}>
+    <div className="flex flex-col" style={{ minHeight: '100vh' }}>
 
       {/* ── TOP BAR ── */}
       <div className="flex flex-wrap items-center justify-between gap-3 px-6 py-3 border-b border-white/[0.07] bg-[#0E0E12] flex-shrink-0">
