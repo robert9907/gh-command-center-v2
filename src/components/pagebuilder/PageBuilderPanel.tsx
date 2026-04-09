@@ -303,19 +303,19 @@ export default function PageBuilderPanel() {
   return (
     <div className="flex flex-col" style={{ height: 'calc(100vh - 160px)', overflow: 'hidden' }}>
 
-      {/* ── TOP BAR ROW 1: Title + Mode buttons + API Key — all on one line, no wrap ── */}
-      <div className="flex items-center gap-2 px-4 py-2 border-b border-white/[0.07] bg-[#0E0E12] flex-shrink-0" style={{ minHeight: '48px' }}>
-        {/* Title block */}
-        <div className="flex-shrink-0 mr-2">
+      {/* ── TOP BAR ROW 1 ── */}
+      {/* Title left · [Build New | Fix Existing | Scan HTML | NEPQ Cards | ● API Key] right — no spacer, justify-between */}
+      <div className="flex items-center justify-between px-4 py-2 border-b border-white/[0.07] bg-[#0E0E12] flex-shrink-0">
+
+        {/* Left: title */}
+        <div className="flex-shrink-0">
           <div className="font-display text-sm font-bold text-white flex items-center gap-1.5">
             <span>📄</span> Page Builder
           </div>
-          <div className="text-[9px] text-gh-text-muted leading-tight">
-            v5.7.2 · 69-pt · {TEMPLATE_PLACEHOLDERS.length} placeholders
-          </div>
+          <div className="text-[9px] text-gh-text-muted">v5.7.2 · 69-pt · {TEMPLATE_PLACEHOLDERS.length} placeholders</div>
         </div>
 
-        {/* Mode buttons — flex-shrink-0 so they never collapse */}
+        {/* Right: mode buttons + API Key pill — all inline, no wrap */}
         <div className="flex items-center gap-1 flex-shrink-0">
           {([
             { id: 'build' as Mode, label: '🚀 Build New' },
@@ -324,36 +324,33 @@ export default function PageBuilderPanel() {
             { id: 'cards' as Mode, label: '🃏 NEPQ Cards' },
           ]).map((m) => (
             <button key={m.id} onClick={() => setMode(m.id)}
-              className={`px-3 py-1.5 rounded-lg text-[11px] font-bold transition-all whitespace-nowrap flex-shrink-0 ${mode === m.id ? 'bg-white/[0.12] text-white' : 'bg-white/[0.04] text-gh-text-muted hover:bg-white/[0.06]'}`}>
+              className={`px-3 py-1.5 rounded-lg text-[11px] font-bold transition-all whitespace-nowrap ${mode === m.id ? 'bg-white/[0.12] text-white' : 'bg-white/[0.04] text-gh-text-muted hover:bg-white/[0.06]'}`}>
               {m.label}
             </button>
           ))}
-        </div>
 
-        {/* Spacer */}
-        <div className="flex-1" />
-
-        {/* API Key pill */}
-        <div ref={pillRef} className="relative flex-shrink-0">
-          <button onClick={() => { setApiDraft(apiKey); setApiPillOpen(!apiPillOpen); }}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-bold border transition-all whitespace-nowrap"
-            style={{ background: apiKey ? 'rgba(13,148,136,0.12)' : 'rgba(255,255,255,0.04)', borderColor: apiKey ? 'rgba(13,148,136,0.35)' : 'rgba(255,255,255,0.1)', color: apiKey ? '#2DD4BF' : '#6B7B8D' }}>
-            <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: apiKey ? '#34C759' : '#6B7280' }} />
-            API Key
-            <ChevronDown className="w-3 h-3 opacity-60" />
-          </button>
-          {apiPillOpen && (
-            <div className="absolute right-0 top-[calc(100%+6px)] z-50 w-72 rounded-xl border border-white/[0.12] bg-[#1A1A22] shadow-xl p-4 space-y-3">
-              <label className="text-[10px] font-bold text-gh-text-muted uppercase tracking-wider block">Claude API Key</label>
-              <input type="password" value={apiDraft} onChange={(e) => setApiDraft(e.target.value)} placeholder="sk-ant-api03-..."
-                className="w-full px-3 py-2 rounded-lg border border-white/[0.12] bg-white/[0.04] text-white text-xs outline-none"
-                autoFocus onKeyDown={(e) => { if (e.key === 'Enter') { saveApiKey(apiDraft); setApiPillOpen(false); } }} />
-              <button onClick={() => { saveApiKey(apiDraft); setApiPillOpen(false); }}
-                className="w-full py-2 rounded-lg text-xs font-bold bg-teal-600 text-white hover:bg-teal-500">
-                Save &amp; Hide
-              </button>
-            </div>
-          )}
+          {/* API Key pill — sits right next to NEPQ Cards */}
+          <div ref={pillRef} className="relative ml-1">
+            <button onClick={() => { setApiDraft(apiKey); setApiPillOpen(!apiPillOpen); }}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-bold border transition-all whitespace-nowrap"
+              style={{ background: apiKey ? 'rgba(13,148,136,0.12)' : 'rgba(255,255,255,0.04)', borderColor: apiKey ? 'rgba(13,148,136,0.35)' : 'rgba(255,255,255,0.1)', color: apiKey ? '#2DD4BF' : '#6B7B8D' }}>
+              <span className="w-1.5 h-1.5 rounded-full" style={{ background: apiKey ? '#34C759' : '#6B7280' }} />
+              API Key
+              <ChevronDown className="w-3 h-3 opacity-60" />
+            </button>
+            {apiPillOpen && (
+              <div className="absolute right-0 top-[calc(100%+6px)] z-50 w-72 rounded-xl border border-white/[0.12] bg-[#1A1A22] shadow-xl p-4 space-y-3">
+                <label className="text-[10px] font-bold text-gh-text-muted uppercase tracking-wider block">Claude API Key</label>
+                <input type="password" value={apiDraft} onChange={(e) => setApiDraft(e.target.value)} placeholder="sk-ant-api03-..."
+                  className="w-full px-3 py-2 rounded-lg border border-white/[0.12] bg-white/[0.04] text-white text-xs outline-none"
+                  autoFocus onKeyDown={(e) => { if (e.key === 'Enter') { saveApiKey(apiDraft); setApiPillOpen(false); } }} />
+                <button onClick={() => { saveApiKey(apiDraft); setApiPillOpen(false); }}
+                  className="w-full py-2 rounded-lg text-xs font-bold bg-teal-600 text-white hover:bg-teal-500">
+                  Save &amp; Hide
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -376,7 +373,7 @@ export default function PageBuilderPanel() {
           className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-[11px] font-bold transition-all disabled:opacity-40 flex-shrink-0 ${copied ? 'bg-emerald-500/20 border border-emerald-500/30 text-emerald-400' : 'bg-gradient-to-r from-teal-600/80 to-blue-600/80 text-white hover:from-teal-600 hover:to-blue-600'}`}>
           {copied ? <><Check className="w-3 h-3" /> Copied!</> : <><Copy className="w-3 h-3" /> Copy for WordPress</>}
         </button>
-        {buildError && <div className="ml-auto text-[10px] text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-1 flex-shrink-0">{buildError}</div>}
+        {buildError && <div className="ml-auto text-[10px] text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-1">{buildError}</div>}
       </div>
 
       {/* ── 3-PANEL BODY ── */}
@@ -457,29 +454,13 @@ export default function PageBuilderPanel() {
           {mode === 'fix' && scanHtml && (
             <div className="flex items-center gap-1.5 px-4 py-2 border-b border-white/[0.05] flex-shrink-0 flex-wrap">
               <span className="text-[9px] font-bold text-gh-text-muted uppercase tracking-wider">Actions:</span>
-              {[
-                { key: 'wordboost', label: '📝 Word Boost' },
-                { key: 'update2026', label: '📅 2026 Update' },
-              ].map(({ key, label }) => (
-                <button key={key} onClick={async () => {
-                  setBuildProgress(key);
-                  const prompt = AI_PROMPTS[key](selectedPage?.slug || '', pageType, scanHtml);
-                  await runClaudeAction(prompt);
-                }} disabled={building || !apiKey}
-                  className="px-2 py-1 rounded text-[9px] font-bold border border-white/10 text-gh-text-soft hover:bg-white/[0.04] disabled:opacity-40">
-                  {label}
-                </button>
+              {[{ key: 'wordboost', label: '📝 Word Boost' }, { key: 'update2026', label: '📅 2026 Update' }].map(({ key, label }) => (
+                <button key={key} onClick={async () => { setBuildProgress(key); await runClaudeAction(AI_PROMPTS[key](selectedPage?.slug || '', pageType, scanHtml)); }} disabled={building || !apiKey}
+                  className="px-2 py-1 rounded text-[9px] font-bold border border-white/10 text-gh-text-soft hover:bg-white/[0.04] disabled:opacity-40">{label}</button>
               ))}
               {['hero', 'instant', 'faq', 'cta', 'coststrip', 'table', 'schema'].map((section) => (
-                <button key={section} onClick={async () => {
-                  if (!AI_PROMPTS[section]) return;
-                  setBuildProgress(section);
-                  const prompt = AI_PROMPTS[section](selectedPage?.slug || customSlug || '', pageType, scanHtml, scanResult);
-                  await runClaudeAction(prompt);
-                }} disabled={building || !apiKey}
-                  className="px-2 py-1 rounded text-[9px] font-bold border border-white/10 text-gh-text-soft hover:bg-white/[0.04] disabled:opacity-40 capitalize">
-                  {section}
-                </button>
+                <button key={section} onClick={async () => { if (!AI_PROMPTS[section]) return; setBuildProgress(section); await runClaudeAction(AI_PROMPTS[section](selectedPage?.slug || customSlug || '', pageType, scanHtml, scanResult)); }} disabled={building || !apiKey}
+                  className="px-2 py-1 rounded text-[9px] font-bold border border-white/10 text-gh-text-soft hover:bg-white/[0.04] disabled:opacity-40 capitalize">{section}</button>
               ))}
             </div>
           )}
@@ -487,9 +468,7 @@ export default function PageBuilderPanel() {
           {/* NEPQ Cards mode */}
           {mode === 'cards' && (
             <div className="flex-1 overflow-y-auto p-4">
-              <div className="text-[10px] font-bold text-gh-text-muted uppercase tracking-widest mb-3">
-                {pageType === 'aca' ? 'ACA' : 'Medicare'} NEPQ Cards + Sequence
-              </div>
+              <div className="text-[10px] font-bold text-gh-text-muted uppercase tracking-widest mb-3">{pageType === 'aca' ? 'ACA' : 'Medicare'} NEPQ Cards + Sequence</div>
               <div className="grid grid-cols-1 gap-4">
                 {[...MEDICARE_CARDS, ...ACA_CARDS, ...NEPQ_CARDS].map((card) => (
                   <div key={card.id} className="card p-4 space-y-2">
@@ -520,9 +499,7 @@ export default function PageBuilderPanel() {
                     <div style={{ width: 14, height: 14, borderRadius: 3, background: zone.color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 7, fontWeight: 800, color: '#fff', flexShrink: 0 }}>
                       {zone.id.replace('z', '')}
                     </div>
-                    <span style={{ fontSize: 8, fontWeight: 700, color: zone.color, whiteSpace: 'nowrap' }}>
-                      {zone.label} — {zone.desc}
-                    </span>
+                    <span style={{ fontSize: 8, fontWeight: 700, color: zone.color, whiteSpace: 'nowrap' }}>{zone.label} — {zone.desc}</span>
                     {applied && <span style={{ fontSize: 7, color: '#2DD4BF', fontWeight: 600 }}>✓ {applied.tag}</span>}
                     <div style={{ flex: 1, height: 1, background: zone.color, opacity: 0.3 }} />
                     {applied && (
@@ -539,8 +516,7 @@ export default function PageBuilderPanel() {
 
           {appliedZoneCount > 0 && generatedHtml && mode !== 'cards' && (
             <div className="px-4 py-2 border-t border-white/[0.07] flex-shrink-0">
-              <button onClick={injectZones}
-                className="w-full py-2 rounded-lg text-xs font-bold bg-teal-600 text-white hover:bg-teal-500">
+              <button onClick={injectZones} className="w-full py-2 rounded-lg text-xs font-bold bg-teal-600 text-white hover:bg-teal-500">
                 Inject {appliedZoneCount} NEPQ Block{appliedZoneCount > 1 ? 's' : ''} into Page
               </button>
             </div>
@@ -567,9 +543,7 @@ export default function PageBuilderPanel() {
                     </div>
                   </div>
                   <div className="flex-1 min-w-0">
-                    <div className={`text-sm font-bold ${scoreColor(scanResult.pct)}`}>
-                      {scanResult.score} / {scanResult.total} — {scanResult.pct}%
-                    </div>
+                    <div className={`text-sm font-bold ${scoreColor(scanResult.pct)}`}>{scanResult.score} / {scanResult.total} — {scanResult.pct}%</div>
                     <div className="text-[10px] text-gh-text-muted">{scanResult.checks.filter((c) => !c.pass).length} checks failing</div>
                   </div>
                   <button onClick={handleFixAll} disabled={building || !apiKey || !scanHtml}
@@ -603,15 +577,12 @@ export default function PageBuilderPanel() {
                   </div>
                   {checks.map((c) => (
                     <div key={c.id} className={`flex items-start gap-1.5 px-3 py-1.5 border-b border-white/[0.03] ${!c.pass ? 'bg-red-500/[0.03]' : ''}`}>
-                      {c.pass
-                        ? <Check className="w-3 h-3 text-emerald-400 flex-shrink-0 mt-0.5" />
-                        : <X className="w-3 h-3 text-red-400 flex-shrink-0 mt-0.5" />}
+                      {c.pass ? <Check className="w-3 h-3 text-emerald-400 flex-shrink-0 mt-0.5" /> : <X className="w-3 h-3 text-red-400 flex-shrink-0 mt-0.5" />}
                       <span className={`text-[9px] leading-snug flex-1 ${c.pass ? 'text-gh-text-muted' : 'text-white font-medium'}`}>{c.label}</span>
                       {!c.pass && (
                         <button onClick={() => handleFixCheck(c.id)} disabled={fixingCheckId === c.id || !apiKey || !scanHtml}
                           className="flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[8px] font-bold bg-red-500/10 border border-red-500/20 text-red-400 hover:bg-red-500/15 disabled:opacity-40 flex-shrink-0">
-                          {fixingCheckId === c.id ? <Loader2 className="w-2.5 h-2.5 animate-spin" /> : <Zap className="w-2.5 h-2.5" />}
-                          Fix
+                          {fixingCheckId === c.id ? <Loader2 className="w-2.5 h-2.5 animate-spin" /> : <Zap className="w-2.5 h-2.5" />} Fix
                         </button>
                       )}
                     </div>
