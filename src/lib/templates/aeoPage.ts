@@ -36,7 +36,7 @@ body{font-family:-apple-system,'SF Pro Text',BlinkMacSystemFont,sans-serif;backg
 a{text-decoration:none;}
 
 /* ── Header ── */
-.gh-header{background:#fff;border-bottom:1px solid #e5e5ea;padding:12px 24px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;flex-wrap:wrap;gap:8px;}
+.gh-header{background:#fff;border-bottom:1px solid #e5e5ea;padding:12px 24px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;}
 .gh-logo-wrap{display:flex;flex-direction:column;gap:2px;}
 .gh-logo-top{display:flex;align-items:center;gap:8px;}
 .gh-logo-badge{background:#0071e3;padding:4px 10px;border-radius:5px;font-weight:700;font-size:15px;color:#fff;letter-spacing:-0.02em;}
@@ -130,8 +130,10 @@ a{text-decoration:none;}
 
 /* ── Responsive ── */
 @media(max-width:640px){
-  .gh-header{flex-direction:column;align-items:flex-start;gap:10px;}
-  .gh-phone{align-self:stretch;text-align:center;}
+  .split-pill{border-radius:100px !important;display:flex !important;flex-direction:column !important;}
+  .pill-left,.pill-right{width:100% !important;min-width:0 !important;text-align:center !important;border-radius:0 !important;}
+  .pill-left{border-radius:100px 100px 0 0 !important;}
+  .pill-right{border-radius:0 0 100px 100px !important;}
   
   .fear-grid{grid-template-columns:1fr;}
   .scenario-cards{grid-template-columns:1fr;}
@@ -150,16 +152,15 @@ a{text-decoration:none;}
 </head>
 <body>
 
-<header class="gh-header">
-  <div class="gh-logo-wrap">
-    <div class="gh-logo-top">
-      <div class="gh-logo-badge">GH.me</div>
-      <div class="gh-logo-div"></div>
-      <div class="gh-logo-name">GenerationHealth.me</div>
+<header style="background:#fff !important;border-bottom:1px solid #e5e5ea !important;padding:12px 20px !important;display:flex !important;align-items:center !important;justify-content:space-between !important;position:sticky !important;top:0 !important;z-index:100 !important;">
+  <div style="display:flex;flex-direction:column;gap:2px;">
+    <div style="display:flex;align-items:center;gap:8px;">
+      <div style="background:#0071e3 !important;padding:4px 10px !important;border-radius:5px !important;font-weight:700 !important;font-size:14px !important;color:#fff !important;letter-spacing:-0.02em !important;">GH.me</div>
+      <div style="font-size:13px !important;font-weight:600 !important;color:#1d1d1f !important;">GenerationHealth.me</div>
     </div>
-    <div class="gh-logo-sub">Independent Medicare Broker</div>
+    <div style="font-size:9px !important;color:#aeaeb2 !important;text-transform:uppercase !important;letter-spacing:0.5px !important;padding-left:2px !important;">Independent Medicare Broker</div>
   </div>
-  <a href="tel:8287613326" class="gh-phone">(828) 761-3326</a>
+  <a href="tel:8287613326" style="font-size:14px !important;font-weight:700 !important;color:#0071e3 !important;background:#EFF6FF !important;padding:10px 18px !important;border-radius:100px !important;border:2px solid #0071e3 !important;white-space:nowrap !important;text-decoration:none !important;flex-shrink:0 !important;">(828) 761-3326</a>
 </header>
 
 <div class="hero">
