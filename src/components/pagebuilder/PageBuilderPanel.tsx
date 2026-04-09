@@ -1,6 +1,5 @@
 'use client';
-
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import { Check, X, Upload, Zap, Copy, ChevronDown, ChevronRight, Loader2, Download, Play, Eye, RefreshCw } from 'lucide-react';
 import { ZONES, MEDICARE_CARDS, ACA_CARDS, NEPQ_CARDS } from '@/data/pagebuilder';
 import { scan67, type ScanResult } from '@/lib/scan67';
@@ -10,14 +9,11 @@ import { AI_PROMPTS } from '@/lib/ai-prompts';
 import { TEMPLATE_PLACEHOLDERS } from '@/lib/master-template';
 import { clusters } from '@/data/clusters';
 import { getFromStorage, saveToStorage } from '@/lib/utils';
-
 type PageType = 'medicare' | 'aca' | 'broker' | 'dual';
 type Mode = 'build' | 'scan' | 'fix' | 'cards';
 const LS_API_KEY = 'gh-cc-pb-apikey';
 const LS_SAVED_HTML = 'gh-cc-saved-html';
 const CAT_ORDER = ['AEO', 'SEO', 'E-E-A-T', 'CONTENT', 'VQA', 'CONV', 'COMP', 'COMPL'];
-
-// Fetch live page HTML via direct fetch (works when hosted on same domain or CORS allows)
 async function fetchPageHTML(slug: string): Promise<string | null> {
   const urls = [
     `https://generationhealth.me/${slug}/`,
@@ -31,7 +27,6 @@ async function fetchPageHTML(slug: string): Promise<string | null> {
   }
   return null;
 }
-
 export default function PageBuilderPanel() {
   const [mode, setMode] = useState<Mode>('build');
   const [pageType, setPageType] = useState<PageType>('medicare');
@@ -52,8 +47,34 @@ export default function PageBuilderPanel() {
   const [showPreview, setShowPreview] = useState(false);
   const [zoneApplied, setZoneApplied] = useState<Record<string, { q: string; a: string; tag: string } | null>>({});
   const [selectedCard, setSelectedCard] = useState<string | null>(null);
+  const [fixingCheckId, setFixingCheckId] = useState<string | null>(null);
+
+  // ── CHANGE 1: API key pill state ──
+  const [apiPillOpen, setApiPillOpen] = useState(false);
+  const [apiDraftKey, setApiDraftKey] = useState('');
+  const pillRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (pillRef.current && !pillRef.current.contains(e.target as Node)) {
+        setApiPillOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, []);
 
   const saveApiKey = useCallback((key: string) => { setApiKey(key); saveToStorage(LS_API_KEY, key); }, []);
+
+  const handleApiPillOpen = useCallback(() => {
+    setApiDraftKey(apiKey);
+    setApiPillOpen(true);
+  }, [apiKey]);
+
+  const handleApiSaveHide = useCallback(() => {
+    saveApiKey(apiDraftKey);
+    setApiPillOpen(false);
+  }, [apiDraftKey, saveApiKey]);
 
   const allPages = useMemo(() => {
     const pages: Array<{ name: string; slug: string; cluster: string; status: string }> = [];
@@ -63,7 +84,6 @@ export default function PageBuilderPanel() {
   const plannedPages = useMemo(() => allPages.filter((p) => p.status === 'planned'), [allPages]);
   const livePages = useMemo(() => allPages.filter((p) => p.status === 'done'), [allPages]);
 
-  // ── BUILD PAGE: Claude generates full HTML using template classes ──
   const handleBuildPage = useCallback(async () => {
     if (!apiKey) { setBuildError('Add your Claude API key first'); return; }
     const slug = selectedPage?.slug || customSlug;
@@ -82,19 +102,14 @@ export default function PageBuilderPanel() {
       setBuildProgress('Processing response...');
       const data = await response.json();
       let result = data.content?.[0]?.text || '';
-
-      // Strip markdown code blocks if present
       result = result.replace(/^```(?:html|json|javascript|js)?\n?/gm, '');
       result = result.replace(/\n?```$/gm, '');
       result = result.trim();
-
-      // If output starts with raw JSON-LD (no script tag), wrap it
       if (result.startsWith('{') && result.includes('@context')) {
         let bc = 0, ei = 0;
         for (let i = 0; i < result.length; i++) { if (result[i] === '{') bc++; if (result[i] === '}') bc--; if (bc === 0) { ei = i + 1; break; } }
         if (ei > 0) result = `<script type="application/ld+json">${result.substring(0, ei)}<\/script>\n${result.substring(ei).trim()}`;
       }
-
       setGeneratedHtml(result);
       setBuildProgress('');
       const sr = scan67(result, pageType); setScanResult(sr); setScanHtml(result);
@@ -103,7 +118,6 @@ export default function PageBuilderPanel() {
     setBuilding(false);
   }, [apiKey, selectedPage, customSlug, customTitle, pageType]);
 
-  // ── FETCH from live site ──
   const handleFetch = useCallback(async (slug: string) => {
     setFetching(true);
     const html = await fetchPageHTML(slug);
@@ -112,7 +126,6 @@ export default function PageBuilderPanel() {
       setScanHtml(html);
       setGeneratedHtml(html);
       setScanResult(scan67(html, pageType));
-      // Save
       const saved = getFromStorage<Record<string, string>>(LS_SAVED_HTML, {});
       saved[slug] = html;
       saveToStorage(LS_SAVED_HTML, saved);
@@ -121,7 +134,6 @@ export default function PageBuilderPanel() {
     }
   }, [pageType]);
 
-  // ── LOAD saved HTML ──
   const loadSaved = useCallback((slug: string) => {
     const saved = getFromStorage<Record<string, string>>(LS_SAVED_HTML, {});
     if (saved[slug]) {
@@ -132,10 +144,39 @@ export default function PageBuilderPanel() {
   }, [pageType]);
 
   const runScan = useCallback(() => { if (!scanHtml.trim()) return; setScanResult(scan67(scanHtml, pageType)); }, [scanHtml, pageType]);
+
   const handleFileUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]; if (!file) return;
     const reader = new FileReader(); reader.onload = (ev) => { const t = ev.target?.result as string; setScanHtml(t); setScanResult(scan67(t, pageType)); }; reader.readAsText(file);
   }, [pageType]);
+
+  // ── CHANGE 2: per-check Fix handler using batchfix prompt ──
+  const handleFixCheck = useCallback(async (checkId: string) => {
+    if (!apiKey || !scanResult || !scanHtml) return;
+    setFixingCheckId(checkId);
+    try {
+      const prompt = AI_PROMPTS.batchfix(selectedPage?.slug || customSlug || '', pageType, scanHtml, scanResult);
+      const resp = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
+        body: JSON.stringify({ model: 'claude-sonnet-4-20250514', max_tokens: 4096, system: AI_SYSTEM_PROMPT, messages: [{ role: 'user', content: prompt }] }),
+      });
+      const data = await resp.json();
+      const result = data.content?.[0]?.text || '';
+      if (result) {
+        setGeneratedHtml(result);
+        setScanHtml(result);
+        setScanResult(scan67(result, pageType));
+        if (selectedPage?.slug) {
+          const saved = getFromStorage<Record<string, string>>(LS_SAVED_HTML, {});
+          saved[selectedPage.slug] = result;
+          saveToStorage(LS_SAVED_HTML, saved);
+        }
+      }
+    } catch (e) { setBuildError(e instanceof Error ? e.message : String(e)); }
+    setFixingCheckId(null);
+  }, [apiKey, scanResult, scanHtml, selectedPage, customSlug, pageType]);
+
   const groupedChecks = useMemo(() => { if (!scanResult) return {}; const g: Record<string, typeof scanResult.checks> = {}; scanResult.checks.forEach((c) => { if (!g[c.cat]) g[c.cat] = []; g[c.cat].push(c); }); return g; }, [scanResult]);
   const copyHtml = useCallback(() => { navigator.clipboard.writeText(generatedHtml); setCopied(true); setTimeout(() => setCopied(false), 2000); }, [generatedHtml]);
   const downloadHtml = useCallback(() => { const s = selectedPage?.slug || customSlug || 'page'; const b = new Blob([generatedHtml], { type: 'text/html' }); const u = URL.createObjectURL(b); const a = document.createElement('a'); a.href = u; a.download = `${s}.html`; a.click(); URL.revokeObjectURL(u); }, [generatedHtml, selectedPage, customSlug]);
@@ -152,7 +193,7 @@ export default function PageBuilderPanel() {
           <h2 className="font-display text-xl font-bold text-white flex items-center gap-2"><span>📄</span> Page Builder</h2>
           <p className="text-xs text-gh-text-muted mt-1">Template v5.7.2 · 67-point scanner · {TEMPLATE_PLACEHOLDERS.length} placeholders · Claude fills values</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           {([
             { id: 'build' as Mode, label: '🚀 Build New' },
             { id: 'fix' as Mode, label: '🔧 Fix Existing' },
@@ -161,6 +202,43 @@ export default function PageBuilderPanel() {
           ]).map((m) => (
             <button key={m.id} onClick={() => setMode(m.id)} className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${mode === m.id ? 'bg-white/[0.12] text-white' : 'bg-white/[0.04] text-gh-text-muted hover:bg-white/[0.06]'}`}>{m.label}</button>
           ))}
+
+          {/* ── CHANGE 1: API Key collapsed pill ── */}
+          <div ref={pillRef} className="relative">
+            <button
+              onClick={apiPillOpen ? () => setApiPillOpen(false) : handleApiPillOpen}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold border transition-all"
+              style={{
+                background: apiKey ? 'rgba(13,148,136,0.12)' : 'rgba(255,255,255,0.04)',
+                borderColor: apiKey ? 'rgba(13,148,136,0.35)' : 'rgba(255,255,255,0.1)',
+                color: apiKey ? '#2DD4BF' : '#6B7B8D',
+              }}
+            >
+              <span className="w-1.5 h-1.5 rounded-full" style={{ background: apiKey ? '#34C759' : '#6B7280' }} />
+              API Key
+              <ChevronDown className="w-3 h-3 opacity-60" />
+            </button>
+            {apiPillOpen && (
+              <div className="absolute right-0 top-[calc(100%+6px)] z-50 w-72 rounded-xl border border-white/[0.12] bg-[#1A1A22] shadow-xl p-4 space-y-3">
+                <label className="text-[10px] font-bold text-gh-text-muted uppercase tracking-wider block">Claude API Key</label>
+                <input
+                  type="password"
+                  value={apiDraftKey}
+                  onChange={(e) => setApiDraftKey(e.target.value)}
+                  placeholder="sk-ant-api03-..."
+                  className={inputCls}
+                  autoFocus
+                  onKeyDown={(e) => { if (e.key === 'Enter') handleApiSaveHide(); }}
+                />
+                <button
+                  onClick={handleApiSaveHide}
+                  className="w-full py-2 rounded-lg text-xs font-bold bg-teal-600 text-white hover:bg-teal-500 transition-colors"
+                >
+                  Save &amp; Hide
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -174,13 +252,6 @@ export default function PageBuilderPanel() {
       {/* ═══ BUILD MODE ═══ */}
       {mode === 'build' && (
         <div className="space-y-4">
-          <div className="card p-4">
-            <div className="flex items-center gap-3">
-              <label className="text-[10px] font-bold text-gh-text-muted uppercase tracking-wider whitespace-nowrap">Claude API Key</label>
-              <input type="password" value={apiKey} onChange={(e) => saveApiKey(e.target.value)} placeholder="sk-ant-api03-..." className={`${inputCls} max-w-md`} />
-              {apiKey && <span className="text-[10px] text-emerald-400 font-bold">✓ Set</span>}
-            </div>
-          </div>
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
             <div className="card p-4 space-y-3">
               <div className="text-[11px] font-bold text-gh-text-muted uppercase tracking-widest">Planned Pages ({plannedPages.length})</div>
@@ -240,14 +311,12 @@ export default function PageBuilderPanel() {
                 {Object.keys(zoneApplied).length > 0 && generatedHtml && (
                   <button onClick={() => {
                     let html = generatedHtml;
-                    // Inject NEPQ blocks at zone positions (by percentage into the HTML)
                     const sortedZones = ZONES.filter((z) => zoneApplied[z.id]).sort((a, b) => b.pct - a.pct);
                     sortedZones.forEach((z) => {
                       const card = zoneApplied[z.id];
                       if (!card) return;
                       const block = `<div class="gh-nepq-block" style="padding:28px 32px;background:rgba(13,148,136,0.06);border-left:4px solid #0D9488;margin:32px 0"><p style="font-size:17px;font-weight:700;font-style:italic;color:#1A2332;margin:0 0 12px;line-height:1.6">\u201c${card.q}\u201d</p><p style="font-size:17px;line-height:1.78;color:#3A4553;margin:0">${card.a}</p></div>`;
                       const pos = Math.floor(html.length * z.pct);
-                      // Find nearest closing tag to inject after
                       const searchFrom = html.indexOf('>', pos);
                       if (searchFrom > -1) html = html.slice(0, searchFrom + 1) + '\n' + block + '\n' + html.slice(searchFrom + 1);
                     });
@@ -256,7 +325,6 @@ export default function PageBuilderPanel() {
                     Inject {Object.keys(zoneApplied).length} NEPQ Block{Object.keys(zoneApplied).length > 1 ? 's' : ''} into Page
                   </button>
                 )}
-                {/* Quick NEPQ card selector for zones */}
                 <div className="mt-3 text-[10px] font-bold text-gh-text-muted uppercase mb-2">Click card → Click zone to place</div>
                 <div className="space-y-1 max-h-[200px] overflow-y-auto">
                   {allCards.map((card) => (
@@ -270,7 +338,6 @@ export default function PageBuilderPanel() {
               </div>
             </div>
           </div>
-          {/* Generated output */}
           {generatedHtml && (
             <div className="card p-5 space-y-4">
               <div className="flex items-center justify-between">
@@ -301,12 +368,6 @@ export default function PageBuilderPanel() {
       {/* ═══ FIX MODE ═══ */}
       {mode === 'fix' && (
         <div className="space-y-4">
-          <div className="card p-4">
-            <div className="flex items-center gap-3">
-              <label className="text-[10px] font-bold text-gh-text-muted uppercase tracking-wider whitespace-nowrap">Claude API Key</label>
-              <input type="password" value={apiKey} onChange={(e) => saveApiKey(e.target.value)} placeholder="sk-ant-api03-..." className={`${inputCls} max-w-md`} />
-            </div>
-          </div>
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
             <div className="card p-4 space-y-3">
               <div className="text-[11px] font-bold text-gh-text-muted uppercase tracking-widest">Live Pages ({livePages.length})</div>
@@ -348,28 +409,34 @@ export default function PageBuilderPanel() {
                         </div>
                       </div>
                     )}
+                    {/* ── CHANGE 2: per-check Fix button on each failing check ── */}
                     {scanResult && (
                       <div className="space-y-1">
                         {scanResult.checks.filter((c) => !c.pass).map((c) => (
                           <div key={c.id} className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-red-500/[0.06] border border-red-500/10">
                             <X className="w-3.5 h-3.5 text-red-400 flex-shrink-0" />
-                            <span className="text-xs text-white">{c.label}</span>
-                            <span className="text-[9px] font-bold px-1.5 py-0.5 rounded ml-auto" style={{ background: `${c.catColor}15`, color: c.catColor }}>{c.cat}</span>
+                            <span className="text-xs text-white flex-1">{c.label}</span>
+                            <span className="text-[9px] font-bold px-1.5 py-0.5 rounded" style={{ background: `${c.catColor}15`, color: c.catColor }}>{c.cat}</span>
+                            <button
+                              onClick={() => handleFixCheck(c.id)}
+                              disabled={fixingCheckId === c.id || !apiKey || !scanHtml}
+                              className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-bold border border-red-400/30 text-red-400 hover:bg-red-400/10 disabled:opacity-40 transition-all whitespace-nowrap"
+                            >
+                              {fixingCheckId === c.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <Zap className="w-3 h-3" />}
+                              {fixingCheckId === c.id ? 'Fixing...' : 'Fix'}
+                            </button>
                           </div>
                         ))}
                       </div>
                     )}
                   </div>
                   <textarea value={scanHtml} onChange={(e) => setScanHtml(e.target.value)} placeholder="Paste page HTML here or use Fetch Live..." className="w-full h-40 px-3 py-2 rounded-xl border border-white/[0.08] bg-white/[0.02] text-xs text-gh-text-soft font-mono resize-y outline-none" />
-
-                  {/* AI Action Buttons */}
                   {scanHtml && (
                     <div className="card p-4 space-y-3">
                       <div className="text-[11px] font-bold text-gh-text-muted uppercase tracking-widest">AI Actions</div>
                       <div className="flex gap-2 flex-wrap">
                         <button onClick={async () => {
                           if (!apiKey || !scanResult) return;
-                          const fails = scanResult.checks.filter((c) => !c.pass).map((c) => c.label);
                           const prompt = AI_PROMPTS.batchfix(selectedPage?.slug || '', pageType, scanHtml, scanResult);
                           setBuilding(true); setBuildProgress('Batch fixing...');
                           try {
@@ -405,7 +472,6 @@ export default function PageBuilderPanel() {
                           📅 2026 Update
                         </button>
                       </div>
-                      {/* Section-by-section generation */}
                       <div className="text-[10px] font-bold text-gh-text-muted uppercase mt-3 mb-2">Generate Section</div>
                       <div className="flex gap-1.5 flex-wrap">
                         {['hero', 'instant', 'faq', 'cta', 'coststrip', 'table', 'tips', 'warnings', 'related', 'schema'].map((section) => (
@@ -426,8 +492,6 @@ export default function PageBuilderPanel() {
                       {building && <div className="text-xs text-gh-text-muted flex items-center gap-2"><Loader2 className="w-3 h-3 animate-spin" />{buildProgress}</div>}
                     </div>
                   )}
-
-                  {/* Generated output from AI actions */}
                   {generatedHtml && mode === 'fix' && (
                     <div className="card p-4 space-y-3">
                       <div className="flex items-center justify-between">
