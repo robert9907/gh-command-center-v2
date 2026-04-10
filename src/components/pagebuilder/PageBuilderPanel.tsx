@@ -426,10 +426,18 @@ export default function PageBuilderPanel() {
 
   const loadSaved = useCallback((slug: string) => {
     const saved = getFromStorage<Record<string, string>>(LS_SAVED_HTML, {});
-    if (saved[slug]) {
-      setScanHtml(saved[slug]); setGeneratedHtml(saved[slug]); updateScanResult(saved[slug], slug);
+    const html = saved[slug] || '';
+    // Detect and discard corrupted markdown content (Fix All returned markdown instead of HTML)
+    const isMd = html.trimStart().startsWith('#') || html.trimStart().startsWith('```');
+    if (html && !isMd) {
+      setScanHtml(html); setGeneratedHtml(html); updateScanResult(html, slug);
     } else {
-      // No saved HTML but may have a cached score — clear viewfinder but keep score visible
+      if (isMd) {
+        // Purge corrupted entry so it does not persist
+        const cleaned = { ...saved };
+        delete cleaned[slug];
+        saveToStorage(LS_SAVED_HTML, cleaned);
+      }
       setScanHtml(''); setGeneratedHtml('');
       setScanResult(null);
     }
@@ -516,7 +524,14 @@ export default function PageBuilderPanel() {
   const scoreColor = (pct: number) => pct >= 80 ? 'text-emerald-400' : pct >= 60 ? 'text-amber-400' : 'text-red-400';
 
   // FIX 3: Wrap generated HTML with preview stylesheet so classes render correctly
-  const viewfinderSrcDoc = generatedHtml
+  // Also detect corrupted/markdown content (starts with # or ```) and fall back to placeholder
+  const isValidHtml = (html: string) => {
+    if (!html) return false;
+    const trimmed = html.trimStart();
+    if (trimmed.startsWith('#') || trimmed.startsWith('```')) return false;
+    return /<[a-zA-Z]/.test(trimmed);
+  };
+  const viewfinderSrcDoc = isValidHtml(generatedHtml)
     ? `<!DOCTYPE html><html><head><meta charset="utf-8"><style>${GH_PREVIEW_CSS}</style></head><body>${generatedHtml}</body></html>`
     : PREVIEW_HTML;
 
@@ -773,7 +788,15 @@ export default function PageBuilderPanel() {
                     <div key={c.id} style={{ display:'flex', alignItems:'flex-start', gap:5, padding:'4px 10px', borderBottom:'1px solid rgba(255,255,255,0.03)', background: !c.pass ? 'rgba(239,68,68,0.03)' : 'transparent' }}>
                       {c.pass ? <Check style={{ width:11, height:11, color:'#4ade80', flexShrink:0, marginTop:1 }} /> : <X style={{ width:11, height:11, color:'#f87171', flexShrink:0, marginTop:1 }} />}
                       <span style={{ fontSize:9, lineHeight:1.3, flex:1, color: c.pass ? '#9ca3af' : '#fff', fontWeight: c.pass ? 400 : 500 }}>{c.label}</span>
-
+                      {!c.pass && (
+                        <button
+                          onClick={() => handleFixCheck(c.id)}
+                          disabled={building || !apiKey || !scanHtml || fixingCheckId === c.id}
+                          style={{ display:'flex', alignItems:'center', gap:2, padding:'2px 6px', borderRadius:4, fontSize:8, fontWeight:700, background:'rgba(239,68,68,0.1)', border:'1px solid rgba(239,68,68,0.2)', color:'#f87171', cursor:'pointer', flexShrink:0, whiteSpace:'nowrap', opacity:(building || !apiKey || !scanHtml) ? 0.4 : 1 }}>
+                          {fixingCheckId === c.id ? <Loader2 style={{ width:8, height:8 }} className="animate-spin" /> : <Zap style={{ width:8, height:8 }} />}
+                          Fix
+                        </button>
+                      )}
                     </div>
                   ))}
                 </div>
