@@ -682,12 +682,7 @@ export default function PageBuilderPanel() {
                     <div key={c.id} className={`flex items-start gap-1.5 px-3 py-1.5 border-b border-white/[0.03] ${!c.pass ? 'bg-red-500/[0.03]' : ''}`}>
                       {c.pass ? <Check className="w-3 h-3 text-emerald-400 flex-shrink-0 mt-0.5" /> : <X className="w-3 h-3 text-red-400 flex-shrink-0 mt-0.5" />}
                       <span className={`text-[9px] leading-snug flex-1 ${c.pass ? 'text-gh-text-muted' : 'text-white font-medium'}`}>{c.label}</span>
-                      {!c.pass && (
-                        <button onClick={() => handleFixCheck(c.id)} disabled={fixingCheckId === c.id || !apiKey || !scanHtml}
-                          className="flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[8px] font-bold bg-red-500/10 border border-red-500/20 text-red-400 hover:bg-red-500/15 disabled:opacity-40 flex-shrink-0">
-                          {fixingCheckId === c.id ? <Loader2 className="w-2.5 h-2.5 animate-spin" /> : <Zap className="w-2.5 h-2.5" />} Fix
-                        </button>
-                      )}
+
                     </div>
                   ))}
                 </div>
