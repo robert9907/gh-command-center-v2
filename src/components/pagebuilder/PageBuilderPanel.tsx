@@ -267,6 +267,26 @@ export default function PageBuilderPanel() {
     return () => document.removeEventListener('mousedown', handler);
   }, []);
 
+  // Auto-select first page on mount so scanner populates immediately
+  useEffect(() => {
+    const pages: Array<{ name: string; slug: string; cluster: string; status: string }> = [];
+    clusters.forEach((c) => c.posts.forEach((p) => {
+      if (p.slug) pages.push({ name: p.name, slug: p.slug, cluster: c.name, status: p.status });
+    }));
+    const planned = pages.filter((p) => p.status === 'planned');
+    if (planned.length > 0) {
+      const first = planned[0];
+      setSelectedPage(first);
+      setCustomTitle(first.name);
+      setCustomSlug(first.slug);
+      const saved = getFromStorage<Record<string, string>>(LS_SAVED_HTML, {});
+      if (saved[first.slug]) {
+        setScanHtml(saved[first.slug]);
+        setGeneratedHtml(saved[first.slug]);
+      }
+    }
+  }, []);
+
   const saveApiKey = useCallback((key: string) => { setApiKey(key); saveToStorage(LS_API_KEY, key); }, []);
 
   const allPages = useMemo(() => {
@@ -636,34 +656,34 @@ export default function PageBuilderPanel() {
         </div>
 
         {/* RIGHT: Scanner + NEPQ Cards */}
-        <div className="flex-shrink-0 border-l border-white/[0.07] bg-[#0E0E12] flex flex-col overflow-hidden" style={{ width: '260px' }}>
+        <div style={{ width:260, flexShrink:0, borderLeft:'1px solid rgba(255,255,255,0.07)', background:'#0E0E12', display:'flex', flexDirection:'column', overflow:'hidden' }}>
 
-          <div className="px-4 py-3 border-b border-white/[0.07] flex-shrink-0">
+          <div style={{ padding:'8px 10px', borderBottom:'1px solid rgba(255,255,255,0.07)', flexShrink:0 }}>
             {scanResult ? (
               <>
-                <div className="flex items-center gap-3 mb-2">
-                  <div className="relative w-11 h-11 flex-shrink-0">
-                    <svg viewBox="0 0 36 36" className="w-full h-full -rotate-90">
+                <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:6 }}>
+                  <div style={{ position:'relative', width:44, height:44, flexShrink:0 }}>
+                    <svg viewBox="0 0 36 36" style={{ width:'100%', height:'100%', transform:'rotate(-90deg)' }}>
                       <circle cx="18" cy="18" r="15.9" fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="3" />
                       <circle cx="18" cy="18" r="15.9" fill="none"
                         stroke={scanResult.pct >= 80 ? '#4ADE80' : scanResult.pct >= 60 ? '#FFC72C' : '#EF4444'}
                         strokeWidth="3" strokeDasharray={`${scanResult.pct} ${100 - scanResult.pct}`} strokeLinecap="round" />
                     </svg>
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <span className="text-[10px] font-extrabold text-white">{scanResult.score}</span>
+                    <div style={{ position:'absolute', inset:0, display:'flex', alignItems:'center', justifyContent:'center' }}>
+                      <span style={{ fontSize:10, fontWeight:800, color:'#fff' }}>{scanResult.score}</span>
                     </div>
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <div className={`text-sm font-bold ${scoreColor(scanResult.pct)}`}>{scanResult.score} / {scanResult.total} — {scanResult.pct}%</div>
-                    <div className="text-[10px] text-gh-text-muted">{scanResult.checks.filter((c) => !c.pass).length} checks failing</div>
+                  <div style={{ flex:1, minWidth:0 }}>
+                    <div style={{ fontSize:12, fontWeight:700, color: scanResult.pct >= 80 ? '#4ADE80' : scanResult.pct >= 60 ? '#FFC72C' : '#EF4444' }}>{scanResult.score} / {scanResult.total} — {scanResult.pct}%</div>
+                    <div style={{ fontSize:9, color:'#9ca3af', marginTop:1 }}>{scanResult.checks.filter((c) => !c.pass).length} checks failing</div>
                   </div>
                   <button onClick={handleFixAll} disabled={building || !apiKey || !scanHtml}
-                    className="flex items-center gap-1 px-2 py-1.5 rounded text-[9px] font-bold bg-red-500/10 border border-red-500/20 text-red-400 hover:bg-red-500/15 disabled:opacity-40 flex-shrink-0">
-                    <Zap className="w-3 h-3" /> Fix All
+                    style={{ display:'flex', alignItems:'center', gap:4, padding:'5px 10px', borderRadius:6, fontSize:9, fontWeight:700, background:'rgba(239,68,68,0.1)', border:'1px solid rgba(239,68,68,0.2)', color:'#f87171', cursor:'pointer', flexShrink:0, whiteSpace:'nowrap', opacity: (building || !apiKey || !scanHtml) ? 0.4 : 1 }}>
+                    <Zap style={{ width:12, height:12 }} /> Fix All
                   </button>
                 </div>
-                <div className="w-full h-1.5 bg-white/[0.06] rounded-full overflow-hidden">
-                  <div className="h-full rounded-full" style={{ width: `${scanResult.pct}%`, background: scanResult.pct >= 80 ? '#4ADE80' : scanResult.pct >= 60 ? '#FFC72C' : '#EF4444' }} />
+                <div style={{ width:'100%', height:5, background:'rgba(255,255,255,0.06)', borderRadius:99, overflow:'hidden' }}>
+                  <div style={{ height:'100%', borderRadius:99, width:`${scanResult.pct}%`, background: scanResult.pct >= 80 ? '#4ADE80' : scanResult.pct >= 60 ? '#FFC72C' : '#EF4444' }} />
                 </div>
               </>
             ) : (
@@ -674,21 +694,21 @@ export default function PageBuilderPanel() {
             )}
           </div>
 
-          <div className="flex-shrink-0 overflow-y-auto" style={{ maxHeight: '240px' }}>
+          <div style={{ overflowY:'auto', maxHeight:220, flexShrink:0 }}>
             {scanResult && CAT_ORDER.map((cat) => {
               const checks = scanResult.checks.filter((c) => c.cat === cat);
               if (!checks.length) return null;
               const passed = checks.filter((c) => c.pass).length;
               return (
                 <div key={cat}>
-                  <div className="flex items-center justify-between px-3 py-1.5 bg-white/[0.02] border-b border-white/[0.04]">
-                    <span className="text-[8px] font-bold uppercase tracking-wider" style={{ color: checks[0].catColor }}>{cat}</span>
-                    <span className={`text-[10px] font-bold ${passed === checks.length ? 'text-emerald-400' : 'text-white'}`}>{passed}/{checks.length}</span>
+                  <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'5px 10px', background:'rgba(255,255,255,0.02)', borderBottom:'1px solid rgba(255,255,255,0.04)' }}>
+                    <span style={{ fontSize:8, fontWeight:700, textTransform:'uppercase', letterSpacing:'0.08em', color: checks[0].catColor }}>{cat}</span>
+                    <span style={{ fontSize:10, fontWeight:700, color: passed === checks.length ? '#4ade80' : '#fff' }}>{passed}/{checks.length}</span>
                   </div>
                   {checks.map((c) => (
-                    <div key={c.id} className={`flex items-start gap-1.5 px-3 py-1.5 border-b border-white/[0.03] ${!c.pass ? 'bg-red-500/[0.03]' : ''}`}>
-                      {c.pass ? <Check className="w-3 h-3 text-emerald-400 flex-shrink-0 mt-0.5" /> : <X className="w-3 h-3 text-red-400 flex-shrink-0 mt-0.5" />}
-                      <span className={`text-[9px] leading-snug flex-1 ${c.pass ? 'text-gh-text-muted' : 'text-white font-medium'}`}>{c.label}</span>
+                    <div key={c.id} style={{ display:'flex', alignItems:'flex-start', gap:5, padding:'4px 10px', borderBottom:'1px solid rgba(255,255,255,0.03)', background: !c.pass ? 'rgba(239,68,68,0.03)' : 'transparent' }}>
+                      {c.pass ? <Check style={{ width:11, height:11, color:'#4ade80', flexShrink:0, marginTop:1 }} /> : <X style={{ width:11, height:11, color:'#f87171', flexShrink:0, marginTop:1 }} />}
+                      <span style={{ fontSize:9, lineHeight:1.3, flex:1, color: c.pass ? '#9ca3af' : '#fff', fontWeight: c.pass ? 400 : 500 }}>{c.label}</span>
 
                     </div>
                   ))}
@@ -697,34 +717,34 @@ export default function PageBuilderPanel() {
             })}
           </div>
 
-          <div className="h-px bg-white/[0.07] flex-shrink-0" />
+          <div style={{ height:1, background:'rgba(255,255,255,0.07)', flexShrink:0 }} />
 
-          <div className="px-3 pt-2.5 pb-1.5 flex-shrink-0">
-            <div className="text-[9px] font-bold text-gh-text-muted uppercase tracking-widest mb-2">NEPQ Cards</div>
-            <div className="flex gap-1">
+          <div style={{ padding:'8px 10px 5px', flexShrink:0 }}>
+            <div style={{ fontSize:8, fontWeight:700, color:'#6b7280', textTransform:'uppercase', letterSpacing:'0.1em', marginBottom:5 }}>NEPQ Cards</div>
+            <div style={{ display:'flex', gap:4 }}>
               {(['medicare', 'aca', 'nepq'] as NepqTab[]).map((t) => (
                 <button key={t} onClick={() => setNepqTab(t)}
-                  className={`px-2.5 py-1 rounded text-[8px] font-bold uppercase tracking-wider ${nepqTab === t ? 'bg-carolina/20 text-carolina' : 'bg-white/[0.04] text-gh-text-muted hover:bg-white/[0.06]'}`}>
+                  style={{ padding:'3px 8px', borderRadius:5, fontSize:8, fontWeight:700, textTransform:'uppercase', letterSpacing:'0.05em', border:'none', cursor:'pointer', background: nepqTab === t ? 'rgba(75,156,211,0.2)' : 'rgba(255,255,255,0.04)', color: nepqTab === t ? '#4b9cd3' : '#9ca3af' }}>
                   {t}
                 </button>
               ))}
             </div>
           </div>
 
-          <div className="flex-1 overflow-y-auto px-3 space-y-1.5 pb-2">
+          <div style={{ flex:1, overflowY:'auto', padding:'5px 8px', display:'flex', flexDirection:'column', gap:4 }}>
             {nepqCards.map((card) => (
               <div key={card.id} onClick={() => setSelectedCard(selectedCard === card.id ? null : card.id)}
-                className={`rounded-lg border p-2.5 cursor-pointer transition-all ${selectedCard === card.id ? 'bg-teal-500/10 border-teal-500/40' : 'bg-white/[0.02] border-white/[0.06] hover:bg-white/[0.04]'}`}>
-                <div className="text-[8px] font-extrabold uppercase tracking-widest text-teal-400 mb-1">{card.tag}</div>
-                <div className="text-[10px] font-bold text-white leading-snug mb-1" style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{card.q}</div>
-                <div className="text-[9px] text-gh-text-muted leading-snug" style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{card.a.slice(0, 90)}...</div>
+                style={{ borderRadius:7, border:`1px solid ${selectedCard === card.id ? 'rgba(45,212,191,0.4)' : 'rgba(255,255,255,0.06)'}`, padding:8, cursor:'pointer', background: selectedCard === card.id ? 'rgba(20,184,166,0.1)' : 'rgba(255,255,255,0.02)' }}>
+                <div style={{ fontSize:7, fontWeight:800, color:'#2dd4bf', textTransform:'uppercase', letterSpacing:'0.1em', marginBottom:3 }}>{card.tag}</div>
+                <div style={{ fontSize:9, fontWeight:700, color:'#fff', lineHeight:1.3, marginBottom:2, overflow:'hidden', display:'-webkit-box', WebkitLineClamp:2, WebkitBoxOrient:'vertical' }}>{card.q}</div>
+                <div style={{ fontSize:8, color:'#9ca3af', lineHeight:1.3, overflow:'hidden', display:'-webkit-box', WebkitLineClamp:2, WebkitBoxOrient:'vertical' }}>{card.a.slice(0, 90)}...</div>
               </div>
             ))}
           </div>
 
-          <div className="px-3 py-2.5 border-t border-white/[0.07] flex-shrink-0">
+          <div style={{ padding:'5px 8px', borderTop:'1px solid rgba(255,255,255,0.07)', flexShrink:0 }}>
             <button disabled={!selectedCard}
-              className="w-full py-2 rounded-lg text-[10px] font-bold disabled:opacity-40 bg-teal-600/20 border border-teal-500/30 text-teal-400 hover:bg-teal-600/30">
+              style={{ width:'100%', padding:'6px', borderRadius:6, fontSize:8, fontWeight:700, background:'rgba(20,184,166,0.1)', border:'1px solid rgba(20,184,166,0.25)', color:'#5eead4', cursor: selectedCard ? 'pointer' : 'default', opacity: selectedCard ? 1 : 0.6 }}>
               {selectedCard ? 'Click a zone overlay on the page →' : 'Select a card above first'}
             </button>
           </div>
