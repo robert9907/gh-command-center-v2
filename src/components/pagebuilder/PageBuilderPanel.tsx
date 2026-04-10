@@ -90,19 +90,146 @@ const PREVIEW_HTML = `<div style="font-family:'DM Sans',system-ui,sans-serif;bac
   </div>
 </div>`;
 
+// ── GH Master Template preview stylesheet ──────────────────────────────────
+// Injected into iframe srcDoc so generated pages render with correct styles.
+// Uses the same class names the AI generates (.gh-hero, .gh-answer, etc.)
+const GH_PREVIEW_CSS = `
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'DM Sans',system-ui,sans-serif;background:#fff;color:#1a2332;font-size:16px;line-height:1.6}
+.gh-hero{background:linear-gradient(135deg,#0f2440 0%,#1e3a5f 100%);padding:60px 32px 40px;color:#fff}
+.gh-eyebrow-text{font-size:11px;font-weight:700;color:#ffc72c;letter-spacing:.12em;text-transform:uppercase;display:block;margin-bottom:12px}
+.gh-h1{font-size:32px;font-weight:800;line-height:1.15;margin-bottom:16px}
+.gh-h1-line1{color:#fff;display:block}
+.gh-h1-line2{color:#4b9cd3;display:block}
+.gh-hero-sub{font-size:17px;color:rgba(255,255,255,.8);margin-bottom:24px;max-width:600px}
+.gh-hero-actions{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:24px}
+.gh-hero-btn{display:inline-flex;align-items:center;gap:8px;padding:12px 24px;border-radius:8px;font-weight:700;font-size:15px;text-decoration:none}
+.gh-hero-btn--call{background:#fff;color:#0f2440}
+.gh-hero-btn--compare{background:#4b9cd3;color:#fff}
+.gh-creds{border-top:1px solid rgba(255,255,255,.15);padding-top:16px;margin-top:8px}
+.gh-creds-inner{display:flex;gap:16px;flex-wrap:wrap;font-size:12px;color:rgba(255,255,255,.7)}
+.gh-cred--gold{color:#ffc72c;font-weight:700}
+.gh-cred--cta a{color:#4b9cd3}
+.gh-cred-divider{width:1px;background:rgba(255,255,255,.2);flex-shrink:0}
+.gh-prose{max-width:760px;margin:0 auto;padding:48px 32px}
+.gh-prose h2{font-size:26px;font-weight:800;color:#0f2440;margin-bottom:20px;line-height:1.2;margin-top:40px}
+.gh-prose h3{font-size:20px;font-weight:700;color:#0f2440;margin-bottom:14px;margin-top:32px}
+.gh-prose p{color:#3a4553;margin-bottom:16px}
+.gh-prose ul,.gh-prose ol{color:#3a4553;padding-left:24px;margin-bottom:16px}
+.gh-prose li{margin-bottom:8px}
+.gh-answer{background:#eff6ff;border-left:4px solid #4b9cd3;padding:20px 24px;border-radius:0 8px 8px 0;margin-bottom:24px}
+.gh-answer-label{font-size:10px;font-weight:800;color:#4b9cd3;text-transform:uppercase;letter-spacing:.1em;display:block;margin-bottom:8px}
+.gh-costs{background:#0f2440;padding:40px 32px;color:#fff}
+.gh-costs-hd h3{font-size:20px;font-weight:800;color:#fff;margin-bottom:8px}
+.gh-costs-hd p{font-size:13px;color:rgba(255,255,255,.6);margin-bottom:24px}
+.gh-costs-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:20px}
+.gh-cost-box{background:rgba(255,255,255,.08);border-radius:10px;padding:20px;text-align:center}
+.gh-cost-label{font-size:10px;font-weight:700;color:#4b9cd3;text-transform:uppercase;letter-spacing:.1em;margin-bottom:8px}
+.gh-cost-val{font-size:28px;font-weight:900;color:#fff;display:block;margin-bottom:6px}
+.gh-cost-note{font-size:11px;color:rgba(255,255,255,.5)}
+.gh-costs-src p{font-size:12px;color:rgba(255,255,255,.5)}
+.gh-costs-src a{color:#4b9cd3}
+.gh-container{max-width:900px;margin:0 auto;padding:40px 32px}
+.gh-cta-modal{background:#f0f7ff;border:1px solid #dbeafe;border-radius:16px;padding:40px}
+.gh-cta-hd h2{font-size:24px;font-weight:800;color:#0f2440;margin-bottom:8px}
+.gh-cta-hd p{font-size:13px;color:#6b7b8d;margin-bottom:24px}
+.gh-cta-grid{display:grid;grid-template-columns:1fr 1fr;gap:24px}
+.gh-cta-card{background:#fff;border-radius:12px;padding:24px;box-shadow:0 2px 8px rgba(0,0,0,.08)}
+.gh-cta-card h3{font-size:16px;font-weight:800;color:#0f2440;margin-bottom:8px}
+.gh-cta-card p{font-size:13px;color:#6b7b8d;margin-bottom:16px}
+.gh-ghost{display:block;padding:12px 16px;border-radius:8px;font-weight:700;font-size:13px;text-decoration:none;margin-bottom:8px;text-align:center}
+.gh-ghost--primary,.gh-ghost--compare{background:#0071e3;color:#fff}
+.gh-ghost--call{background:#0f2440;color:#fff}
+.gh-ghost--text,.gh-ghost--sched{background:#f5f5f7;color:#1a2332;border:1px solid #e5e5ea}
+.gh-ghost-sub{display:block;font-size:10px;font-weight:400;opacity:.7;margin-top:2px}
+.gh-faq{padding:40px 0}
+.gh-faq-title{font-size:24px;font-weight:800;color:#0f2440;margin-bottom:8px}
+.gh-faq-sub{font-size:14px;color:#6b7b8d;margin-bottom:24px}
+.gh-faq-list{display:flex;flex-direction:column;gap:8px}
+.gh-faq-item{border:1px solid #e5e5ea;border-radius:10px;overflow:hidden}
+.gh-faq-q{padding:16px 20px;font-weight:700;font-size:15px;color:#0f2440;cursor:pointer;list-style:none;display:flex;justify-content:space-between;align-items:center}
+.gh-faq-q::-webkit-details-marker{display:none}
+.gh-faq-a{padding:0 20px 16px;font-size:14px;color:#3a4553}
+.gh-faq-chev{width:16px;height:16px;flex-shrink:0}
+details[open] .gh-faq-chev{transform:rotate(180deg)}
+.gh-tip{background:#fffbeb;border-left:4px solid #ffc72c;padding:20px 24px;border-radius:0 8px 8px 0;margin:24px 0}
+.gh-tip-header{font-weight:800;color:#92400e;margin-bottom:8px}
+.gh-warning{background:#fff7ed;border-left:4px solid #f97316;padding:20px 24px;border-radius:0 8px 8px 0;margin:24px 0}
+.gh-warning-header{font-weight:800;color:#9a3412;margin-bottom:8px}
+.gh-alert-critical{background:#fef2f2;border-left:4px solid #dc2626;padding:20px 24px;border-radius:0 8px 8px 0;margin:24px 0}
+.gh-nepq-quote{background:#0f2440;padding:48px 32px;text-align:center}
+.gh-nepq-quote blockquote,.gh-nepq-quote p{font-size:22px;font-style:italic;color:#fff;max-width:680px;margin:0 auto;line-height:1.5}
+.gh-nepq-block{padding:28px 32px;background:rgba(13,148,136,.06);border-left:4px solid #0d9488;margin:32px 0}
+.gh-trust-strip{display:grid;grid-template-columns:repeat(3,1fr);gap:24px;padding:40px 32px;background:#f5f5f7}
+.gh-trust-badge{text-align:center;padding:24px}
+.gh-trust-badge-icon{font-size:28px;margin-bottom:12px}
+.gh-trust-badge h4{font-size:15px;font-weight:700;color:#0f2440;margin-bottom:6px}
+.gh-trust-badge p{font-size:13px;color:#6b7b8d}
+.gh-related{padding:40px 32px;max-width:900px;margin:0 auto}
+.gh-related h3{font-size:20px;font-weight:800;color:#0f2440;margin-bottom:16px}
+.gh-related-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:20px}
+.gh-rlink{display:block;padding:12px 16px;background:#f0f7ff;border-radius:8px;font-size:13px;font-weight:600;color:#0071e3;text-decoration:none}
+.gh-county-hd{font-size:13px;font-weight:700;color:#6b7b8d;text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px}
+.gh-county-grid{display:flex;gap:8px;flex-wrap:wrap}
+.gh-clink{padding:6px 14px;background:#fff;border:1px solid #dbeafe;border-radius:20px;font-size:12px;font-weight:600;color:#0071e3;text-decoration:none}
+.gh-author,.gh-author-card{background:#f5f5f7;padding:32px;border-radius:12px;margin:40px 0}
+.gh-scenarios{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin-top:24px}
+.gh-scenario{border-radius:12px;overflow:hidden;border:1px solid #e5e5ea}
+.gh-scenario-hd{padding:20px}
+.gh-scenario-hd--blue{background:#eff6ff}
+.gh-scenario-hd--green{background:#f0fdf4}
+.gh-scenario-hd--purple{background:#faf5ff}
+.gh-scenario-hd--teal{background:#f0fdfa}
+.gh-scenario-hd--amber{background:#fffbeb}
+.gh-scenario-hd h4{font-size:15px;font-weight:800;color:#0f2440;margin-top:8px}
+.gh-scenario-badge{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:#6b7b8d}
+.gh-scenario-body{padding:20px;font-size:13px;color:#3a4553}
+.gh-verdict{margin-top:12px;padding:10px 14px;border-radius:6px;font-size:12px;font-weight:700}
+.gh-verdict--blue{background:#eff6ff;color:#1d4ed8}
+.gh-verdict--green{background:#f0fdf4;color:#15803d}
+.gh-verdict--purple{background:#faf5ff;color:#7e22ce}
+.gh-verdict--teal{background:#f0fdfa;color:#0d9488}
+.gh-verdict--amber{background:#fffbeb;color:#92400e}
+.gh-comparison{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin:24px 0}
+.gh-comparison-card{background:#fff;border:1px solid #e5e5ea;border-radius:12px;padding:24px}
+.gh-comparison-card h3{font-size:18px;font-weight:800;color:#0f2440;margin-bottom:16px}
+.gh-comp-item{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #f2f2f7;font-size:14px}
+.gh-compare-table{width:100%;border-collapse:collapse;font-size:14px}
+.gh-compare-table th{background:#0f2440;color:#fff;padding:12px 16px;text-align:left}
+.gh-compare-table td{padding:10px 16px;border-bottom:1px solid #f2f2f7}
+.gh-compare-table tr:nth-child(even) td{background:#f9fafb}
+table{width:100%;border-collapse:collapse}
+th{background:#0f2440;color:#fff;padding:12px 16px;text-align:left;font-size:14px}
+td{padding:10px 16px;border-bottom:1px solid #f2f2f7;font-size:14px;color:#3a4553}
+`;
+
+// ── FIX 2: Fetch Live via scrape-proxy.php to bypass CORS ──────────────────
 async function fetchPageHTML(slug: string): Promise<string | null> {
-  const urls = [`https://generationhealth.me/${slug}/`, `https://generationhealth.me/${slug}`];
-  for (const url of urls) {
-    try { const r = await fetch(url); if (r.ok) return await r.text(); } catch { /* try next */ }
-  }
+  try {
+    const pageUrl = `https://generationhealth.me/${slug}/`;
+    const proxyUrl = `https://generationhealth.me/tools/scrape-proxy.php?url=${encodeURIComponent(pageUrl)}`;
+    const r = await fetch(proxyUrl);
+    if (r.ok) return await r.text();
+  } catch { /* fall through */ }
   return null;
 }
 
+// ── FIX 1: Correct model string — was 'claude-sonnet-4-20250514' ────────────
 function callClaude(apiKey: string, prompt: string, maxTokens = 8192): Promise<Response> {
   return fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
-    body: JSON.stringify({ model: 'claude-sonnet-4-20250514', max_tokens: maxTokens, system: AI_SYSTEM_PROMPT, messages: [{ role: 'user', content: prompt }] }),
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': apiKey,
+      'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-direct-browser-access': 'true',
+    },
+    body: JSON.stringify({
+      model: 'claude-sonnet-4-5',
+      max_tokens: maxTokens,
+      system: AI_SYSTEM_PROMPT,
+      messages: [{ role: 'user', content: prompt }],
+    }),
   });
 }
 
@@ -202,6 +329,7 @@ export default function PageBuilderPanel() {
 
   const handleFetch = useCallback(async (slug: string) => {
     setFetching(true);
+    setBuildError(null);
     const html = await fetchPageHTML(slug);
     setFetching(false);
     if (html) {
@@ -209,7 +337,7 @@ export default function PageBuilderPanel() {
       updateScanResult(html, slug);
       const saved = getFromStorage<Record<string, string>>(LS_SAVED_HTML, {});
       saved[slug] = html; saveToStorage(LS_SAVED_HTML, saved);
-    } else { setBuildError('Could not fetch — CORS may be blocking. Paste HTML manually.'); }
+    } else { setBuildError('Could not fetch via proxy. Paste HTML manually.'); }
   }, [updateScanResult]);
 
   const loadSaved = useCallback((slug: string) => {
@@ -287,18 +415,24 @@ export default function PageBuilderPanel() {
     setGeneratedHtml(html);
   }, [generatedHtml, zoneApplied]);
 
-  const scoreBadgeClass = (score?: number) => {
+  // FIX 4: Score badge uses scanResult.total (dynamic) instead of hardcoded 69
+  const scoreBadgeClass = (score?: number, total = 67) => {
     if (!score) return 'bg-white/[0.06] text-gh-text-faint';
-    const pct = Math.round((score / 69) * 100);
+    const pct = Math.round((score / total) * 100);
     if (pct >= 80) return 'bg-emerald-500/15 text-emerald-400';
     if (pct >= 55) return 'bg-amber-500/15 text-amber-400';
     return 'bg-red-500/15 text-red-400';
   };
   const scoreColor = (pct: number) => pct >= 80 ? 'text-emerald-400' : pct >= 60 ? 'text-amber-400' : 'text-red-400';
 
-  const viewfinderHtml = generatedHtml || PREVIEW_HTML;
+  // FIX 3: Wrap generated HTML with preview stylesheet so classes render correctly
+  const viewfinderSrcDoc = generatedHtml
+    ? `<!DOCTYPE html><html><head><meta charset="utf-8"><style>${GH_PREVIEW_CSS}</style></head><body>${generatedHtml}</body></html>`
+    : PREVIEW_HTML;
+
   const activeSlug = selectedPage?.slug || customSlug || '';
   const appliedZoneCount = Object.values(zoneApplied).filter(Boolean).length;
+  const scanTotal = scanResult?.total ?? 67;
 
   return (
     <div className="flex flex-col" style={{ height: 'calc(100vh - 160px)', overflow: 'hidden' }}>
@@ -384,8 +518,8 @@ export default function PageBuilderPanel() {
                   className={`w-full text-left px-3 py-2.5 border-b border-white/[0.04] transition-colors ${selectedPage?.slug === p.slug ? 'bg-carolina/[0.12] border-l-2 border-l-carolina pl-2.5' : 'hover:bg-white/[0.03]'}`}>
                   <div className="text-[10px] font-medium text-gh-text-soft leading-snug" style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{p.name}</div>
                   <div className="text-[9px] text-gh-text-faint mt-0.5 truncate">/{p.slug}</div>
-                  <span className={`inline-block text-[8px] font-bold px-1.5 py-0.5 rounded mt-1 ${scoreBadgeClass(sc)}`}>
-                    {sc !== undefined ? `${sc}/69` : '—'}
+                  <span className={`inline-block text-[8px] font-bold px-1.5 py-0.5 rounded mt-1 ${scoreBadgeClass(sc, scanTotal)}`}>
+                    {sc !== undefined ? `${sc}/${scanTotal}` : '—'}
                   </span>
                 </button>
               );
@@ -393,7 +527,7 @@ export default function PageBuilderPanel() {
           </div>
         </div>
 
-        {/* CENTER: Viewfinder — contained iframe box with zone overlays */}
+        {/* CENTER: Viewfinder */}
         <div className="flex-1 flex flex-col bg-[#0E0E12] overflow-hidden min-w-0 p-3">
 
           {/* Generate / Fetch / Scan action bar */}
@@ -475,9 +609,9 @@ export default function PageBuilderPanel() {
                 </div>
               );
             })}
-            {/* iframe fills the container and scrolls within it */}
+            {/* FIX 3: iframe uses viewfinderSrcDoc which wraps generated HTML with GH stylesheet */}
             <iframe
-              srcDoc={viewfinderHtml}
+              srcDoc={viewfinderSrcDoc}
               className="w-full h-full"
               style={{ border: 'none', display: 'block' }}
               sandbox="allow-scripts"
