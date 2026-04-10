@@ -107,9 +107,6 @@ function callClaude(apiKey: string, prompt: string, maxTokens = 8192): Promise<R
 }
 
 const ZONE_OVERLAY_PCTS = [31, 43, 54, 62, 72, 79, 86, 93];
-const SCALE = 0.5;
-const IFRAME_W = 1024;
-const IFRAME_H = 2400;
 
 export default function PageBuilderPanel() {
   const [mode, setMode] = useState<Mode>('build');
@@ -337,7 +334,7 @@ export default function PageBuilderPanel() {
             <ChevronDown className="w-3 h-3 opacity-60" />
           </button>
           {apiPillOpen && (
-            <div className="absolute right-0 top-[calc(100%+6px)] z-50 w-72 rounded-xl border border-white/[0.12] bg-[#1A1A22] shadow-xl p-4 space-y-3">
+            <div className="absolute left-0 top-[calc(100%+6px)] z-50 w-72 rounded-xl border border-white/[0.12] bg-[#1A1A22] shadow-xl p-4 space-y-3">
               <label className="text-[10px] font-bold text-gh-text-muted uppercase tracking-wider block">Claude API Key</label>
               <input type="password" value={apiDraft} onChange={(e) => setApiDraft(e.target.value)} placeholder="sk-ant-api03-..."
                 className="w-full px-3 py-2 rounded-lg border border-white/[0.12] bg-white/[0.04] text-white text-xs outline-none"
@@ -396,28 +393,23 @@ export default function PageBuilderPanel() {
           </div>
         </div>
 
-        {/* CENTER: Viewfinder */}
-        <div className="flex-1 flex flex-col bg-[#121216] overflow-hidden min-w-0">
+        {/* CENTER: Viewfinder — contained iframe box with zone overlays */}
+        <div className="flex-1 flex flex-col bg-[#0E0E12] overflow-hidden min-w-0 p-3">
 
-          {/* Browser chrome bar */}
-          <div className="flex items-center gap-2 px-3 py-2 bg-[#1A2332] flex-shrink-0">
-            <div className="flex gap-1.5 flex-shrink-0">
-              <div className="w-3 h-3 rounded-full bg-[#FF5F57]" />
-              <div className="w-3 h-3 rounded-full bg-[#FEBC2E]" />
-              <div className="w-3 h-3 rounded-full bg-[#28C840]" />
-            </div>
-            <div className="flex-1 bg-white/[0.08] rounded-md px-3 py-1 text-[9px] text-white/40 text-center truncate min-w-0">
-              {activeSlug ? `generationhealth.me/${activeSlug}/` : 'generationhealth.me — select a page'}
+          {/* Generate / Fetch / Scan action bar */}
+          <div className="flex items-center gap-2 mb-3 flex-shrink-0">
+            <div className="flex-1 text-[9px] text-gh-text-faint truncate">
+              {activeSlug ? `generationhealth.me/${activeSlug}/` : 'Select a page from the left, then click Generate'}
             </div>
             {mode === 'fix' && selectedPage && (
               <button onClick={() => handleFetch(selectedPage.slug)} disabled={fetching}
-                className="flex-shrink-0 flex items-center gap-1 px-2 py-1 rounded bg-amber-500/20 border border-amber-500/30 text-amber-400 text-[9px] font-bold disabled:opacity-40">
+                className="flex items-center gap-1 px-2 py-1 rounded bg-amber-500/20 border border-amber-500/30 text-amber-400 text-[9px] font-bold disabled:opacity-40 flex-shrink-0">
                 {fetching ? <Loader2 className="w-3 h-3 animate-spin" /> : <RefreshCw className="w-3 h-3" />}
                 {fetching ? 'Fetching...' : 'Fetch Live'}
               </button>
             )}
             {mode === 'scan' && (
-              <label className="flex-shrink-0 flex items-center gap-1 px-2 py-1 rounded bg-white/[0.08] border border-white/10 text-gh-text-muted text-[9px] font-bold cursor-pointer">
+              <label className="flex items-center gap-1 px-2 py-1 rounded bg-white/[0.08] border border-white/10 text-gh-text-muted text-[9px] font-bold cursor-pointer flex-shrink-0">
                 <Upload className="w-3 h-3" /> Upload
                 <input type="file" accept=".html,.htm" onChange={handleFileUpload} className="hidden" />
               </label>
@@ -425,25 +417,25 @@ export default function PageBuilderPanel() {
             <button
               onClick={mode === 'scan' ? () => { if (scanHtml.trim()) updateScanResult(scanHtml); } : handleBuildPage}
               disabled={building || fetching || (mode === 'build' && !customSlug && !selectedPage)}
-              className="flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded text-[9px] font-bold disabled:opacity-40 bg-gradient-to-r from-teal-600 to-blue-600 text-white">
+              className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-[10px] font-bold disabled:opacity-40 bg-gradient-to-r from-teal-600 to-blue-600 text-white flex-shrink-0">
               {building ? <Loader2 className="w-3 h-3 animate-spin" /> : <Play className="w-3 h-3" />}
-              {building ? buildProgress.slice(0, 18) + '...' : mode === 'scan' ? 'Scan' : '▶ Generate'}
+              {building ? buildProgress.slice(0, 20) + '...' : mode === 'scan' ? 'Scan' : '▶ Generate'}
             </button>
           </div>
 
           {/* Scan/Fix HTML input */}
           {(mode === 'scan' || (mode === 'fix' && selectedPage)) && (
-            <div className="px-4 py-2 border-b border-white/[0.07] flex-shrink-0">
+            <div className="mb-3 flex-shrink-0">
               <textarea value={scanHtml} onChange={(e) => setScanHtml(e.target.value)}
                 placeholder={mode === 'scan' ? 'Paste page HTML here...' : 'Paste page HTML or use Fetch Live...'}
                 className="w-full px-3 py-2 rounded-lg border border-white/[0.08] bg-white/[0.02] text-[10px] text-gh-text-soft font-mono resize-none outline-none"
-                style={{ height: '72px' }} />
+                style={{ height: '60px' }} />
             </div>
           )}
 
           {/* Fix mode AI actions */}
           {mode === 'fix' && scanHtml && (
-            <div className="flex items-center gap-1.5 px-4 py-2 border-b border-white/[0.05] flex-shrink-0 flex-wrap">
+            <div className="flex items-center gap-1.5 mb-3 flex-shrink-0 flex-wrap">
               <span className="text-[9px] font-bold text-gh-text-muted uppercase tracking-wider">Actions:</span>
               {[{ key: 'wordboost', label: '📝 Word Boost' }, { key: 'update2026', label: '📅 2026 Update' }].map(({ key, label }) => (
                 <button key={key} onClick={async () => { setBuildProgress(key); await runClaudeAction(AI_PROMPTS[key](selectedPage?.slug || '', pageType, scanHtml)); }} disabled={building || !apiKey}
@@ -456,56 +448,45 @@ export default function PageBuilderPanel() {
             </div>
           )}
 
-          {/* Scaled viewfinder — iframe rendered at IFRAME_W x IFRAME_H, scaled down to 50% */}
-          <div className="flex-1 overflow-y-auto bg-[#0a0a0e]">
-            <div style={{ position: 'relative', width: `${IFRAME_W * SCALE}px`, height: `${IFRAME_H * SCALE}px`, margin: '0 auto' }}>
-              {/* Zone overlays — positioned in scaled space */}
-              {ZONES.map((zone, idx) => {
-                const topPx = (IFRAME_H * ZONE_OVERLAY_PCTS[idx] / 100) * SCALE;
-                const applied = zoneApplied[zone.id];
-                return (
-                  <div key={zone.id}
-                    style={{ position: 'absolute', top: `${topPx}px`, left: 0, right: 0, zIndex: 10, display: 'flex', alignItems: 'center', gap: 4, padding: '2px 8px', background: `${zone.color}20`, cursor: selectedCard ? 'pointer' : 'default' }}
-                    onClick={() => {
-                      if (!selectedCard) return;
-                      const card = allCards.find((c) => c.id === selectedCard);
-                      if (card) { setZoneApplied((prev) => ({ ...prev, [zone.id]: { q: card.q, a: card.a, tag: card.tag } })); setSelectedCard(null); }
-                    }}>
-                    <div style={{ width: 14, height: 14, borderRadius: 3, background: zone.color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 7, fontWeight: 800, color: '#fff', flexShrink: 0 }}>
-                      {zone.id.replace('z', '')}
-                    </div>
-                    <span style={{ fontSize: 8, fontWeight: 700, color: zone.color, whiteSpace: 'nowrap' }}>{zone.label} — {zone.desc}</span>
-                    {applied && <span style={{ fontSize: 7, color: '#2DD4BF', fontWeight: 600 }}>✓ {applied.tag}</span>}
-                    <div style={{ flex: 1, height: 1, background: zone.color, opacity: 0.3 }} />
-                    {applied && (
-                      <button onClick={(e) => { e.stopPropagation(); setZoneApplied((prev) => { const n = { ...prev }; delete n[zone.id]; return n; }); }}
-                        style={{ fontSize: 9, color: '#f87171', fontWeight: 700, padding: '0 3px', background: 'none', border: 'none', cursor: 'pointer' }}>✕</button>
-                    )}
+          {/* Viewfinder box — contained iframe with zone overlays on top */}
+          <div className="flex-1 relative rounded-lg overflow-hidden border border-white/[0.08]" style={{ minHeight: 0 }}>
+            {/* Zone overlays */}
+            {ZONES.map((zone, idx) => {
+              const pct = ZONE_OVERLAY_PCTS[idx];
+              const applied = zoneApplied[zone.id];
+              return (
+                <div key={zone.id}
+                  style={{ position: 'absolute', top: `${pct}%`, left: 0, right: 0, zIndex: 10, display: 'flex', alignItems: 'center', gap: 4, padding: '2px 8px', background: `${zone.color}20`, cursor: selectedCard ? 'pointer' : 'default' }}
+                  onClick={() => {
+                    if (!selectedCard) return;
+                    const card = allCards.find((c) => c.id === selectedCard);
+                    if (card) { setZoneApplied((prev) => ({ ...prev, [zone.id]: { q: card.q, a: card.a, tag: card.tag } })); setSelectedCard(null); }
+                  }}>
+                  <div style={{ width: 14, height: 14, borderRadius: 3, background: zone.color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 7, fontWeight: 800, color: '#fff', flexShrink: 0 }}>
+                    {zone.id.replace('z', '')}
                   </div>
-                );
-              })}
-              {/* Scaled iframe */}
-              <iframe
-                srcDoc={viewfinderHtml}
-                style={{
-                  position: 'absolute',
-                  top: 0,
-                  left: 0,
-                  width: `${IFRAME_W}px`,
-                  height: `${IFRAME_H}px`,
-                  border: 'none',
-                  transformOrigin: 'top left',
-                  transform: `scale(${SCALE})`,
-                  pointerEvents: 'none',
-                }}
-                sandbox="allow-scripts"
-                title="Page Preview"
-              />
-            </div>
+                  <span style={{ fontSize: 8, fontWeight: 700, color: zone.color, whiteSpace: 'nowrap' }}>{zone.label} — {zone.desc}</span>
+                  {applied && <span style={{ fontSize: 7, color: '#2DD4BF', fontWeight: 600 }}>✓ {applied.tag}</span>}
+                  <div style={{ flex: 1, height: 1, background: zone.color, opacity: 0.3 }} />
+                  {applied && (
+                    <button onClick={(e) => { e.stopPropagation(); setZoneApplied((prev) => { const n = { ...prev }; delete n[zone.id]; return n; }); }}
+                      style={{ fontSize: 9, color: '#f87171', fontWeight: 700, padding: '0 3px', background: 'none', border: 'none', cursor: 'pointer' }}>✕</button>
+                  )}
+                </div>
+              );
+            })}
+            {/* iframe fills the container and scrolls within it */}
+            <iframe
+              srcDoc={viewfinderHtml}
+              className="w-full h-full"
+              style={{ border: 'none', display: 'block' }}
+              sandbox="allow-scripts"
+              title="Page Preview"
+            />
           </div>
 
           {appliedZoneCount > 0 && generatedHtml && (
-            <div className="px-4 py-2 border-t border-white/[0.07] flex-shrink-0">
+            <div className="mt-3 flex-shrink-0">
               <button onClick={injectZones} className="w-full py-2 rounded-lg text-xs font-bold bg-teal-600 text-white hover:bg-teal-500">
                 Inject {appliedZoneCount} NEPQ Block{appliedZoneCount > 1 ? 's' : ''} into Page
               </button>
