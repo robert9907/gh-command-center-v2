@@ -10,7 +10,7 @@ import { TEMPLATE_PLACEHOLDERS } from '@/lib/master-template';
 import { clusters } from '@/data/clusters';
 import { getFromStorage, saveToStorage } from '@/lib/utils';
 
-type PageType = 'medicare' | 'aca' | 'broker';
+type PageType = 'medicare' | 'aca' | 'dual' | 'broker';
 type Mode = 'build' | 'fix' | 'scan';
 type NepqTab = 'medicare' | 'aca' | 'nepq';
 
@@ -342,7 +342,13 @@ export default function PageBuilderPanel() {
 
   const loadSaved = useCallback((slug: string) => {
     const saved = getFromStorage<Record<string, string>>(LS_SAVED_HTML, {});
-    if (saved[slug]) { setScanHtml(saved[slug]); setGeneratedHtml(saved[slug]); updateScanResult(saved[slug], slug); }
+    if (saved[slug]) {
+      setScanHtml(saved[slug]); setGeneratedHtml(saved[slug]); updateScanResult(saved[slug], slug);
+    } else {
+      // No saved HTML but may have a cached score — clear viewfinder but keep score visible
+      setScanHtml(''); setGeneratedHtml('');
+      setScanResult(null);
+    }
   }, [updateScanResult]);
 
   const handleFileUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
@@ -488,6 +494,7 @@ export default function PageBuilderPanel() {
         {([
           { id: 'medicare' as PageType, label: 'Medicare', color: '#4B9CD3' },
           { id: 'aca' as PageType, label: 'ACA', color: '#16A34A' },
+          { id: 'dual' as PageType, label: 'Dual', color: '#8B5CF6' },
           { id: 'broker' as PageType, label: 'Broker', color: '#F97316' },
         ]).map((t) => (
           <button key={t.id} onClick={() => setPageType(t.id)}
@@ -513,7 +520,7 @@ export default function PageBuilderPanel() {
                 <button key={i} onClick={() => {
                   setSelectedPage(p); setCustomTitle(p.name); setCustomSlug(p.slug);
                   setBuildError(null);
-                  if (mode === 'fix') loadSaved(p.slug);
+                  loadSaved(p.slug);
                 }}
                   className={`w-full text-left px-3 py-2.5 border-b border-white/[0.04] transition-colors ${selectedPage?.slug === p.slug ? 'bg-carolina/[0.12] border-l-2 border-l-carolina pl-2.5' : 'hover:bg-white/[0.03]'}`}>
                   <div className="text-[10px] font-medium text-gh-text-soft leading-snug" style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{p.name}</div>
@@ -667,7 +674,7 @@ export default function PageBuilderPanel() {
             )}
           </div>
 
-          <div className="flex-shrink-0 overflow-y-auto" style={{ maxHeight: '320px' }}>
+          <div className="flex-shrink-0 overflow-y-auto" style={{ maxHeight: '240px' }}>
             {scanResult && CAT_ORDER.map((cat) => {
               const checks = scanResult.checks.filter((c) => c.cat === cat);
               if (!checks.length) return null;
