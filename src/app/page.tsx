@@ -8,7 +8,8 @@ import OptimizePanel from '@/components/optimize/OptimizePanel';
 import CitationMonitorPanel from '@/components/citation/CitationMonitorPanel';
 import ContentStudioPanel from '@/components/studio/ContentStudioPanel';
 import IndexingPanel from '@/components/indexing/IndexingPanel';
-import PageBuilderPanel from '@/components/pagebuilder/PageBuilderPanel';
+import dynamic from 'next/dynamic';
+const PageBuilderPanel = dynamic(() => import('@/components/pagebuilder/PageBuilderPanel'), { ssr: false });
 
 function Dashboard() {
   const { activeTab, setActiveTab, theme, toggleTheme } = useAppState();
