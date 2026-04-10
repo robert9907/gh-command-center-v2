@@ -715,14 +715,31 @@ export default function PageBuilderPanel() {
                 </div>
               );
             })}
-            {/* FIX 3: iframe uses viewfinderSrcDoc which wraps generated HTML with GH stylesheet */}
-            <iframe
-              srcDoc={viewfinderSrcDoc}
-              className="w-full h-full"
-              style={{ border: 'none', display: 'block' }}
-              sandbox="allow-scripts"
-              title="Page Preview"
-            />
+            {/* Scaled iframe inside mock browser chrome — matches Image 2 */}
+            <div style={{ position:'absolute', inset:0, display:'flex', flexDirection:'column', background:'#1a1a22' }}>
+              {/* Browser chrome bar */}
+              <div style={{ height:28, background:'#2a2a35', borderBottom:'1px solid rgba(255,255,255,0.08)', display:'flex', alignItems:'center', gap:6, padding:'0 10px', flexShrink:0 }}>
+                <div style={{ display:'flex', gap:4 }}>
+                  <div style={{ width:8, height:8, borderRadius:'50%', background:'#ff5f57' }} />
+                  <div style={{ width:8, height:8, borderRadius:'50%', background:'#febc2e' }} />
+                  <div style={{ width:8, height:8, borderRadius:'50%', background:'#28c840' }} />
+                </div>
+                <div style={{ flex:1, height:16, background:'rgba(255,255,255,0.06)', borderRadius:4, display:'flex', alignItems:'center', paddingLeft:8 }}>
+                  <span style={{ fontSize:8, color:'rgba(255,255,255,0.4)', fontFamily:'monospace' }}>generationhealth.me/{activeSlug}/</span>
+                </div>
+              </div>
+              {/* Scaled page preview */}
+              <div style={{ flex:1, overflow:'hidden', position:'relative' }}>
+                <div style={{ position:'absolute', inset:0, overflow:'hidden' }}>
+                  <iframe
+                    srcDoc={isValidHtml(generatedHtml) ? `<!DOCTYPE html><html><head><meta charset="utf-8"><style>${GH_PREVIEW_CSS}</style></head><body>${generatedHtml}</body></html>` : PREVIEW_HTML}
+                    style={{ border:'none', width:'200%', height:'200%', transform:'scale(0.5)', transformOrigin:'top left', display:'block' }}
+                    sandbox="allow-scripts"
+                    title="Page Preview"
+                  />
+                </div>
+              </div>
+            </div>
           </div>
 
           {appliedZoneCount > 0 && generatedHtml && (
