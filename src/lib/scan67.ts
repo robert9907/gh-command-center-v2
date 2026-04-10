@@ -138,6 +138,8 @@ export function scan67(html: string, pageType: string = 'medicare'): ScanResult 
   checks.push({ id: 'compl-no-guarantee', label: 'No guarantee language', cat: 'COMPL', catColor: '#94A3B8', pass: !html.includes('guarantee') || html.includes('not guarantee') || html.includes('no guarantee') });
   checks.push({ id: 'compl-no-stale', label: 'No stale 2024/2025 figures', cat: 'COMPL', catColor: '#94A3B8', pass: !html.includes('$174.70') && !html.includes('$185') && !html.includes('Part B premium in 2024') });
 
+  // FIX 4: Use checks.length so total always matches actual check count (currently 67)
   const score = checks.filter((c) => c.pass).length;
-  return { score, total: 67, checks, pct: Math.round((score / 67) * 100) };
+  const total = checks.length;
+  return { score, total, checks, pct: Math.round((score / total) * 100) };
 }
