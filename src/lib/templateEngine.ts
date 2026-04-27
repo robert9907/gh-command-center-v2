@@ -19,6 +19,7 @@
  */
 
 import { getLiveCountyUrl } from './livePages';
+import { RELATED_GUIDES } from './data/relatedGuides';
 
 export interface CountyData {
   county: string;
@@ -172,25 +173,45 @@ export interface PageValidationResult {
 const BRACKET_TOKEN_REGEX = /\[[A-Z][A-Z0-9-]*\]/g;
 const RELATED_GUIDE_TOKEN_REGEX = /\[RELATED-GUIDE-\d+\]/g;
 
-// Matches the <div class="section-white"> wrapper around the
-// "Related Medicare guides" pills block defined in aeoPage.ts.
-// Three nested divs: section-white > inner > pills-wrap.
-const RELATED_GUIDES_SECTION_REGEX =
-  /<div class="section-white"[^>]*>\s*<div class="inner">\s*<div class="block-h3">Related Medicare guides<\/div>[\s\S]*?<\/div>\s*<\/div>\s*<\/div>/;
+// Matches the wrapping <div class="section-white"> around the "Related
+// Medicare guides" pills block from aeoPage.ts, but ONLY when the inner
+// <div class="pills-wrap"> is whitespace-only. Used to drop the section
+// when no pills were injected at all (full miss vs partial fill).
+const EMPTY_RELATED_GUIDES_SECTION_REGEX =
+  /<div class="section-white"[^>]*>\s*<div class="inner">\s*<div class="block-h3">Related Medicare guides<\/div>\s*<div class="pills-wrap">\s*<\/div>\s*<\/div>\s*<\/div>/;
 
 /**
- * Fallback cleanup for templates with [RELATED-GUIDE-N] placeholders that
- * the upstream injector failed to fill: drops the tokens AND removes the
- * wrapping <div class="section-white"> from aeoPage.ts so the empty
- * "Related Medicare guides" block never reaches WordPress.
+ * Fill [RELATED-GUIDE-1]..[RELATED-GUIDE-8] placeholders with <a> pills
+ * built from the static RELATED_GUIDES registry. Tokens past the array
+ * length are left alone for cleanupUnresolvedRelatedGuides() to remove.
+ */
+function injectRelatedGuidesFromArray(html: string): string {
+  let out = html;
+  const max = Math.min(RELATED_GUIDES.length, 8);
+  for (let i = 0; i < max; i++) {
+    const guide = RELATED_GUIDES[i];
+    const pill = `<a class="guide-pill" href="${guide.url}">${guide.title}</a>`;
+    out = out.split(`[RELATED-GUIDE-${i + 1}]`).join(pill);
+  }
+  return out;
+}
+
+/**
+ * Cleanup pass for [RELATED-GUIDE-N] placeholders that injection didn't
+ * fill (the AEO template has 8 slots; RELATED_GUIDES may have fewer entries).
  *
- * Run AFTER the injection pipeline, BEFORE validateRenderedPage().
+ * - Strips leftover tokens
+ * - Strips the wrapping <div class="section-white"> ONLY if the
+ *   <div class="pills-wrap"> ends up empty, so partial fills (e.g. 7/8)
+ *   keep the section visible with the real pills.
+ *
+ * Idempotent. Safe to call after injection has run.
  */
 export function cleanupUnresolvedRelatedGuides(html: string): string {
   if (!html.includes('[RELATED-GUIDE-')) return html;
   return html
-    .replace(RELATED_GUIDES_SECTION_REGEX, '')
-    .replace(RELATED_GUIDE_TOKEN_REGEX, '');
+    .replace(RELATED_GUIDE_TOKEN_REGEX, '')
+    .replace(EMPTY_RELATED_GUIDES_SECTION_REGEX, '');
 }
 
 /**
@@ -208,6 +229,8 @@ export function renderTemplate(template: string, data: CountyData): string {
   let output = renderEachBlocks(template, data);
   output = renderArrayIndexes(output, data);
   output = renderSimpleVars(output, data);
+  output = injectRelatedGuidesFromArray(output);
+  output = cleanupUnresolvedRelatedGuides(output);
   return output;
 }
 
