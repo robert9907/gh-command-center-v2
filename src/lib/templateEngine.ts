@@ -178,7 +178,15 @@ const RELATED_GUIDE_TOKEN_REGEX = /\[RELATED-GUIDE-\d+\]/g;
 const RELATED_GUIDES_SECTION_REGEX =
   /<div class="section-white"[^>]*>\s*<div class="inner">\s*<div class="block-h3">Related Medicare guides<\/div>[\s\S]*?<\/div>\s*<\/div>\s*<\/div>/;
 
-function stripUnresolvedRelatedGuides(html: string): string {
+/**
+ * Fallback cleanup for templates with [RELATED-GUIDE-N] placeholders that
+ * the upstream injector failed to fill: drops the tokens AND removes the
+ * wrapping <div class="section-white"> from aeoPage.ts so the empty
+ * "Related Medicare guides" block never reaches WordPress.
+ *
+ * Run AFTER the injection pipeline, BEFORE validateRenderedPage().
+ */
+export function cleanupUnresolvedRelatedGuides(html: string): string {
   if (!html.includes('[RELATED-GUIDE-')) return html;
   return html
     .replace(RELATED_GUIDES_SECTION_REGEX, '')
@@ -200,14 +208,6 @@ export function renderTemplate(template: string, data: CountyData): string {
   let output = renderEachBlocks(template, data);
   output = renderArrayIndexes(output, data);
   output = renderSimpleVars(output, data);
-  output = stripUnresolvedRelatedGuides(output);
-
-  const { valid, issues } = validateRenderedPage(output);
-  if (!valid) {
-    console.warn(
-      `[templateEngine] Rendered page contains unresolved bracket tokens: ${issues.join(', ')}`
-    );
-  }
   return output;
 }
 

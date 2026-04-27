@@ -16,7 +16,12 @@ import { MASTER_TEMPLATE } from '@/lib/master-template';
  */
 
 import { loadCounty, countyNameToSlug } from './countyLoader';
-import { renderTemplate, type CountyData } from './templateEngine';
+import {
+  renderTemplate,
+  cleanupUnresolvedRelatedGuides,
+  validateRenderedPage,
+  type CountyData,
+} from './templateEngine';
 import { injectContextualLinks } from './contextualLinker';
 import { validate } from './validator';
 import { extractCounty } from './intentClassifier';
@@ -213,6 +218,7 @@ export async function buildPageForQuery(
     standalone = renderTemplate(AEO_PAGE_TEMPLATE, data);
     standalone = injectContextualLinks(standalone);
     standalone = await injectRelatedGuides(standalone, countySlug);
+    standalone = cleanupUnresolvedRelatedGuides(standalone);
   } catch (err) {
     return {
       ...empty,
@@ -233,6 +239,13 @@ export async function buildPageForQuery(
     warnings = result.issues
       .filter((i) => i.severity === 'warning')
       .map((i) => i.message);
+
+    const tokenCheck = validateRenderedPage(standalone);
+    if (!tokenCheck.valid) {
+      for (const token of tokenCheck.issues) {
+        errors.push(`Unresolved placeholder token: ${token}`);
+      }
+    }
   } catch (err) {
     return {
       ...empty,

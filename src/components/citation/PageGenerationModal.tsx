@@ -27,7 +27,12 @@ import {
 import { X, Copy, Download, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
 import type { QueryCandidate } from '@/lib/seedExpansion';
 import { loadCounty, getCountyList, countyNameToSlug } from '@/lib/countyLoader';
-import { renderTemplate, type CountyData } from '@/lib/templateEngine';
+import {
+  renderTemplate,
+  cleanupUnresolvedRelatedGuides,
+  validateRenderedPage,
+  type CountyData,
+} from '@/lib/templateEngine';
 import { injectContextualLinks } from '@/lib/contextualLinker';
 import { validate } from '@/lib/validator';
 import { extractCounty } from '@/lib/intentClassifier';
@@ -421,6 +426,11 @@ export default function PageGenerationModal({
       // Inject live WordPress guides + county pills
       html = await injectRelatedGuides(html, countySlug);
 
+      // Fallback: if any [RELATED-GUIDE-N] tokens are still unresolved
+      // (e.g. injection failed), strip them and hide the wrapping section
+      // so the empty "Related Medicare guides" block never reaches WordPress.
+      html = cleanupUnresolvedRelatedGuides(html);
+
       // Count how many guide pills were injected for UI feedback
       const guideMatches = html.match(/class="guide-pill"/g);
       setGuideCount(guideMatches ? guideMatches.length : 0);
@@ -439,12 +449,24 @@ export default function PageGenerationModal({
     setValidateStep('running');
     try {
       const result = validate(data, html);
-      setValidation({
-        errors: result.issues.filter((i) => i.severity === 'error').map((i) => i.message),
-        warnings: result.issues
-          .filter((i) => i.severity === 'warning')
-          .map((i) => i.message),
-      });
+      const errors = result.issues
+        .filter((i) => i.severity === 'error')
+        .map((i) => i.message);
+      const warnings = result.issues
+        .filter((i) => i.severity === 'warning')
+        .map((i) => i.message);
+
+      // Bracket-token publish gate. Any unresolved [PLACEHOLDER] (e.g.
+      // [RELATED-GUIDE-3], [COUNTY-PILLS]) is a hard error so broken HTML
+      // is never silently pushed to WordPress — Copy/Download stay disabled.
+      const tokenCheck = validateRenderedPage(html);
+      if (!tokenCheck.valid) {
+        for (const token of tokenCheck.issues) {
+          errors.push(`Unresolved placeholder token: ${token}`);
+        }
+      }
+
+      setValidation({ errors, warnings });
       setValidateStep('done');
     } catch (err) {
       setValidateStep('error');
