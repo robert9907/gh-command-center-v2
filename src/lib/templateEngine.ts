@@ -164,10 +164,50 @@ function renderSimpleVars(template: string, data: CountyData): string {
   });
 }
 
+export interface PageValidationResult {
+  valid: boolean;
+  issues: string[];
+}
+
+const BRACKET_TOKEN_REGEX = /\[[A-Z][A-Z0-9-]*\]/g;
+const RELATED_GUIDE_TOKEN_REGEX = /\[RELATED-GUIDE-\d+\]/g;
+
+// Matches the <div class="section-white"> wrapper around the
+// "Related Medicare guides" pills block defined in aeoPage.ts.
+// Three nested divs: section-white > inner > pills-wrap.
+const RELATED_GUIDES_SECTION_REGEX =
+  /<div class="section-white"[^>]*>\s*<div class="inner">\s*<div class="block-h3">Related Medicare guides<\/div>[\s\S]*?<\/div>\s*<\/div>\s*<\/div>/;
+
+function stripUnresolvedRelatedGuides(html: string): string {
+  if (!html.includes('[RELATED-GUIDE-')) return html;
+  return html
+    .replace(RELATED_GUIDES_SECTION_REGEX, '')
+    .replace(RELATED_GUIDE_TOKEN_REGEX, '');
+}
+
+/**
+ * Scan final HTML for unresolved [UPPER-CASE-TOKEN] placeholders that
+ * should have been replaced upstream (e.g. [RELATED-GUIDE-N], [COUNTY-PILLS]).
+ * Returns the unique set of leftover tokens so callers can refuse to publish.
+ */
+export function validateRenderedPage(html: string): PageValidationResult {
+  const matches = html.match(BRACKET_TOKEN_REGEX) ?? [];
+  const issues = Array.from(new Set(matches));
+  return { valid: issues.length === 0, issues };
+}
+
 export function renderTemplate(template: string, data: CountyData): string {
   let output = renderEachBlocks(template, data);
   output = renderArrayIndexes(output, data);
   output = renderSimpleVars(output, data);
+  output = stripUnresolvedRelatedGuides(output);
+
+  const { valid, issues } = validateRenderedPage(output);
+  if (!valid) {
+    console.warn(
+      `[templateEngine] Rendered page contains unresolved bracket tokens: ${issues.join(', ')}`
+    );
+  }
   return output;
 }
 

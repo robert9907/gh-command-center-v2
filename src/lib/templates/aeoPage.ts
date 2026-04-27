@@ -298,7 +298,7 @@ a{text-decoration:none;}
     <div class="creds-name">Robert Simm, Licensed Medicare Broker</div>
     <div class="creds-line">NC License #10447418 &middot; NPN #10447418 &middot; AHIP Certified</div>
     <div class="creds-line">12+ Years Experience &middot; 500+ NC Families Helped &middot; 2731 Meridian Pkwy, Durham NC 27713</div>
-    <div class="creds-line">&#9733;&#9733;&#9733;&#9733;&#9733; 5.0 Rating &middot; 20+ Google Reviews &middot; <a class="creds-verify" href="https://www.ncdoi.gov/consumers/verify-license">Verify License &rarr;</a></div>
+    <div class="creds-line">&#9733;&#9733;&#9733;&#9733;&#9733; 5.0 Rating &middot; 20+ Google Reviews &middot; <a class="creds-verify" href="https://sbs.naic.org/solar-external-lookup/">Verify License &rarr;</a></div>
     <div class="eeat-stamp">Last Updated: April 2026 &nbsp;|&nbsp; Reviewed By: Robert Simm, Licensed Medicare Broker, NC #10447418 &nbsp;|&nbsp; Next Review: October 2026</div>
   </div>
 </div>

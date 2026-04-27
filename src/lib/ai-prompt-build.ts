@@ -281,7 +281,7 @@ export function buildFullPagePrompt(slug: string, pageType: string, pageTitle: s
 '  <div class="gh-trust-badge">\n' +
 '    <div class="gh-trust-badge-icon">📍</div>\n' +
 '    <h4>Licensed in NC</h4>\n' +
-'    <p>License #10447418 · Verify at NCDOI.gov</p>\n' +
+'    <p>License #10447418 · Verify License</p>\n' +
 '  </div>\n' +
 '  <div class="gh-trust-badge">\n' +
 '    <div class="gh-trust-badge-icon">🛡️</div>\n' +

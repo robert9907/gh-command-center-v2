@@ -2531,7 +2531,7 @@ article li::before{content:'';position:absolute;left:0;top:10px;width:8px;height
     <div class="gh-trust-badge">
       <div class="gh-trust-badge-icon">🛡️</div>
       <h4>$0 Cost to Compare</h4>
-      <p>License #10447418 &middot; <a href="https://www.ncdoi.gov/consumers/verify-license" target="_blank" rel="noopener">Verify at NCDOI.gov</a></p>
+      <p>License #10447418 &middot; <a href="https://sbs.naic.org/solar-external-lookup/" target="_blank" rel="noopener">Verify License &rarr;</a></p>
     </div>
   </div>
 
@@ -2671,7 +2671,7 @@ article li::before{content:'';position:absolute;left:0;top:10px;width:8px;height
       </div>
       <div class="gh-license-box">
         <p><strong>NC Insurance License #10447418</strong> &middot; NPN #10447418<br>
-        <a href="https://www.ncdoi.gov/consumers/verify-license" target="_blank" rel="noopener">Verify at NCDOI.gov &nearr;</a></p>
+        <a href="https://sbs.naic.org/solar-external-lookup/" target="_blank" rel="noopener">Verify License &rarr;</a></p>
       </div>
       <div class="gh-disclaimer">
         <h3>⚖️ Compliance Disclaimer</h3>
@@ -2820,7 +2820,7 @@ article li::before{content:'';position:absolute;left:0;top:10px;width:8px;height
 
 <footer class="gh-footer-trust">
   <p><strong>GenerationHealth</strong> &middot; Independent Licensed Health Insurance Advisory &middot; North Carolina</p>
-  <p>Robert Simm &middot; NC License #10447418 &middot; NPN #10447418 &middot; AHIP Certified &middot; <a href="https://www.ncdoi.gov/consumers/verify-license" target="_blank" rel="noopener">Verify License</a></p>
+  <p>Robert Simm &middot; NC License #10447418 &middot; NPN #10447418 &middot; AHIP Certified &middot; <a href="https://sbs.naic.org/solar-external-lookup/" target="_blank" rel="noopener">Verify License &rarr;</a></p>
   <p>📞 <a href="tel:828-761-3326">828-761-3326</a> &middot; 📧 <a href="/cdn-cgi/l/email-protection#1b6974797e696f5b7c7e757e697a6f727475737e7a776f7335767e"><span class="__cf_email__" data-cfemail="55273a373027211532303b302734213c3a3b3d303439213d7b3830">[email&#160;protected]</span></a> &middot; 📍 2731 Meridian Pkwy, Durham, NC 27713</p>
   <!-- MEDICARE footer disclaimer -->
   <!-- <p style="margin-top:14px;">We do not offer every plan available in your area. Please contact Medicare.gov or 1-800-MEDICARE for information on all of your options. Not affiliated with or endorsed by the U.S. government or the federal Medicare program.</p> -->
