@@ -13,6 +13,7 @@ const tabs: TabConfig[] = [
   { id: 'keywords', label: 'Keyword War Room' },
   { id: 'indexing', label: 'Indexing', icon: '✏️' },
   { id: 'performance', label: 'Performance' },
+  { id: 'funnel', label: 'Funnel', icon: '📊' },
 ];
 
 interface HeaderProps {

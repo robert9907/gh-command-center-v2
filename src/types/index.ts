@@ -106,7 +106,7 @@ export interface NegativeKeyword {
 }
 
 // ── Tab Navigation ──
-export type TabId = 
+export type TabId =
   | 'architecture'
   | 'optimize'
   | 'pageBuilder'
@@ -114,7 +114,8 @@ export type TabId =
   | 'studio'
   | 'keywords'
   | 'indexing'
-  | 'performance';
+  | 'performance'
+  | 'funnel';
 
 export interface TabConfig {
   id: TabId;

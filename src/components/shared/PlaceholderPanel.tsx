@@ -39,6 +39,11 @@ const tabMeta: Record<TabId, { title: string; description: string; icon: string 
     description: 'Track indexing status and submit pages to Google for crawling.',
     icon: '✏️',
   },
+  funnel: {
+    title: 'Plan Match Funnel',
+    description: 'GA4 event-based funnel for the Plan Match flow with county breakdown.',
+    icon: '📊',
+  },
 };
 
 interface PlaceholderPanelProps {
