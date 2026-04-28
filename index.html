@@ -4847,13 +4847,6 @@ const TEMPLATE_HTML = `
         .hero-eyebrow{font-size:11px;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;color:var(--seafoam);margin-bottom:20px;}
         .hero-h1{font-size:52px;font-weight:700;line-height:1.05;letter-spacing:-0.03em;color:#fff;max-width:700px;margin:0 auto 20px;}
         .hero-sub{font-size:18px;font-weight:500;color:rgba(255,255,255,0.88);max-width:480px;margin:0 auto 44px;line-height:1.55;}
-        .split-pill{display:inline-flex;align-items:stretch;border-radius:999px;overflow:hidden;cursor:pointer;text-decoration:none;box-shadow:0 4px 24px rgba(0,0,0,0.3);}
-        .pill-left{background:#fff;padding:18px 28px;display:flex;flex-direction:column;justify-content:center;border-radius:999px 0 0 999px;text-align:left;min-width:200px;max-width:280px;}
-        .pill-left-q{font-size:11px;font-weight:800;color:#0d2f5e;letter-spacing:0.08em;text-transform:uppercase;margin-bottom:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-        .pill-left-sub{font-size:16px;font-weight:700;color:#0d2f5e;line-height:1.2;letter-spacing:-0.01em;}
-        .pill-right{background:var(--seafoam);padding:18px 32px;display:flex;flex-direction:column;align-items:center;justify-content:center;border-radius:0 999px 999px 0;text-align:center;}
-        .pill-right-main{font-size:18px;font-weight:800;color:#f8fafc;letter-spacing:-0.01em;margin-bottom:3px;}
-        .pill-right-num{font-size:14px;font-weight:900;color:#f8fafc;letter-spacing:0.03em;}
         .trust{background:#fff;padding:18px 40px;border-bottom:1px solid var(--gray-border);display:flex;justify-content:center;gap:32px;flex-wrap:wrap;}
         .trust-item{display:flex;align-items:center;gap:7px;font-size:12px;color:#6b7280;font-weight:500;}
         .trust-dot{width:5px;height:5px;border-radius:50%;background:var(--navy);}
@@ -4917,9 +4910,6 @@ const TEMPLATE_HTML = `
         .no-pressure{font-size:12px;color:rgba(255,255,255,0.38);margin-top:20px;letter-spacing:0.05em;text-transform:uppercase;font-weight:600;}
         @media(max-width:768px){
             .hero-h1{font-size:34px;}.hero-sub{font-size:16px;}
-            .split-pill{flex-direction:column;border-radius:20px;}
-            .pill-left{border-radius:20px 20px 0 0;min-width:unset;max-width:unset;text-align:center;}
-            .pill-left-q{white-space:normal;}.pill-right{border-radius:0 0 20px 20px;}
             .section-h2{font-size:28px;}.fear-grid{grid-template-columns:1fr;}
             .comparison-row{grid-template-columns:1fr;}
             .comp-col-l{padding-right:0;border-right:none;border-bottom:1px solid rgba(255,255,255,0.06);padding-bottom:20px;margin-bottom:20px;}
@@ -4948,16 +4938,17 @@ const TEMPLATE_HTML = `
         <h1 class="hero-h1">Which plans actually cover your {{health_system}} doctors?</h1>
         <p class="hero-sub">I check family history and health risks &mdash; then find the plan that covers what you might need next year, not just today.</p>
         <div style="max-width:560px;margin:0 auto;padding:0 8px;text-align:left;">
+            <p style="font-size:18px;font-weight:600;color:#ffffff;margin:0 0 20px;line-height:1.5;text-align:center;">Now pick how you want to move forward &mdash; your pace.</p>
             <a href="javascript:void(0)" class="pm-pill-trigger" data-product="medicare" style="display:block;background:#67e8f9;border-radius:16px;padding:28px 32px;text-align:center;text-decoration:none;margin-bottom:12px;cursor:pointer;transition:opacity 0.2s;">
                 <div style="font-size:11px;font-weight:800;letter-spacing:0.12em;text-transform:uppercase;color:rgba(0,0,0,0.55);margin-bottom:6px;">PLAN MATCH &middot; 3 MINUTES</div>
                 <div style="font-size:22px;font-weight:700;color:#0a3040;letter-spacing:-0.01em;">Let\'s start with <em>you</em>.</div>
             </a>
             <div id="gh-calendly-wrap" style="margin-bottom:20px;">
-                <div onclick="(function(el){var p=el.closest('#gh-calendly-wrap').querySelector('#gh-cb-panel');var a=el.querySelector('.gh-cb-arrow');if(p.style.display==='none'||!p.style.display){p.style.display='block';a.textContent='&#9652;';}else{p.style.display='none';a.textContent='&#9662;';}})(this)" style="display:block;background:transparent;border:2px solid #0a3040;border-radius:16px;padding:28px 32px;text-align:center;cursor:pointer;transition:opacity 0.2s;position:relative;">
-                    <div style="font-size:11px;font-weight:800;letter-spacing:0.12em;text-transform:uppercase;color:rgba(0,0,0,0.55);margin-bottom:6px;">15-MIN CALL &middot; SAME-WEEK SLOTS</div>
-                    <div style="font-size:22px;font-weight:700;color:#0a3040;letter-spacing:-0.01em;">Book on Calendly <span class="gh-cb-arrow" style="font-size:16px;margin-left:6px;">&#9662;</span></div>
+                <div onclick="(function(el){var p=el.closest('#gh-calendly-wrap').querySelector('#gh-cb-panel');var a=el.querySelector('.gh-cb-arrow');if(p.style.display==='none'||!p.style.display){p.style.display='block';a.textContent='&#9652;';}else{p.style.display='none';a.textContent='&#9662;';}})(this)" style="display:block;background:transparent;border:2px solid #67e8f9;border-radius:16px;padding:28px 32px;text-align:center;cursor:pointer;transition:opacity 0.2s;position:relative;">
+                    <div style="font-size:11px;font-weight:800;letter-spacing:0.12em;text-transform:uppercase;color:rgba(255,255,255,0.6);margin-bottom:6px;">15-MIN CALL &middot; SAME-WEEK SLOTS</div>
+                    <div style="font-size:22px;font-weight:700;color:#ffffff;letter-spacing:-0.01em;">Book on Calendly <span class="gh-cb-arrow" style="font-size:16px;margin-left:6px;color:#ffffff;">&#9662;</span></div>
                 </div>
-                <div id="gh-cb-panel" style="display:none;background:#f8fafb;border:2px solid #0a3040;border-top:none;border-radius:0 0 16px 16px;padding:24px 32px;margin-top:-2px;">
+                <div id="gh-cb-panel" style="display:none;background:#0a3040;border:2px solid #67e8f9;border-top:none;border-radius:0 0 16px 16px;padding:24px 32px;margin-top:-2px;">
                     <form id="ghCallbackForm" action="https://formsubmit.co/robert@generationhealth.me" method="POST" style="margin:0;">
                         <input type="hidden" name="_subject" value="New Callback Request from AEO Page">
                         <input type="hidden" name="_captcha" value="false">
@@ -4966,20 +4957,20 @@ const TEMPLATE_HTML = `
                         <input type="hidden" name="Type" value="Callback Request &mdash; AEO Page">
                         <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
                             <div>
-                                <label for="ghCbFirst" style="display:block;font-size:12px;font-weight:600;color:#555;margin-bottom:4px;">First name</label>
-                                <input id="ghCbFirst" name="First Name" required autocomplete="given-name" style="width:100%;padding:10px 12px;border:1.5px solid #d1d5db;border-radius:8px;font-size:15px;font-family:inherit;outline:none;">
+                                <label for="ghCbFirst" style="display:block;font-size:12px;font-weight:600;color:rgba(255,255,255,0.7);margin-bottom:4px;">First name</label>
+                                <input id="ghCbFirst" name="First Name" required autocomplete="given-name" style="width:100%;padding:10px 12px;border:1.5px solid #d1d5db;border-radius:8px;font-size:15px;font-family:inherit;outline:none;background:#fff;">
                             </div>
                             <div>
-                                <label for="ghCbLast" style="display:block;font-size:12px;font-weight:600;color:#555;margin-bottom:4px;">Last name</label>
-                                <input id="ghCbLast" name="Last Name" required autocomplete="family-name" style="width:100%;padding:10px 12px;border:1.5px solid #d1d5db;border-radius:8px;font-size:15px;font-family:inherit;outline:none;">
+                                <label for="ghCbLast" style="display:block;font-size:12px;font-weight:600;color:rgba(255,255,255,0.7);margin-bottom:4px;">Last name</label>
+                                <input id="ghCbLast" name="Last Name" required autocomplete="family-name" style="width:100%;padding:10px 12px;border:1.5px solid #d1d5db;border-radius:8px;font-size:15px;font-family:inherit;outline:none;background:#fff;">
                             </div>
                         </div>
                         <div style="margin-bottom:12px;">
-                            <label for="ghCbPhone" style="display:block;font-size:12px;font-weight:600;color:#555;margin-bottom:4px;">Phone number</label>
-                            <input id="ghCbPhone" name="Phone" type="tel" required inputmode="tel" autocomplete="tel" placeholder="(555) 555-5555" style="width:100%;padding:10px 12px;border:1.5px solid #d1d5db;border-radius:8px;font-size:15px;font-family:inherit;outline:none;">
+                            <label for="ghCbPhone" style="display:block;font-size:12px;font-weight:600;color:rgba(255,255,255,0.7);margin-bottom:4px;">Phone number</label>
+                            <input id="ghCbPhone" name="Phone" type="tel" required inputmode="tel" autocomplete="tel" placeholder="(555) 555-5555" style="width:100%;padding:10px 12px;border:1.5px solid #d1d5db;border-radius:8px;font-size:15px;font-family:inherit;outline:none;background:#fff;">
                         </div>
                         <div style="margin-bottom:12px;">
-                            <label for="ghCbTime" style="display:block;font-size:12px;font-weight:600;color:#555;margin-bottom:4px;">Best time to call</label>
+                            <label for="ghCbTime" style="display:block;font-size:12px;font-weight:600;color:rgba(255,255,255,0.7);margin-bottom:4px;">Best time to call</label>
                             <select id="ghCbTime" name="Best Time" style="width:100%;padding:10px 12px;border:1.5px solid #d1d5db;border-radius:8px;font-size:15px;font-family:inherit;outline:none;background:#fff;">
                                 <option value="Morning (9am-12pm)">Morning (9am&ndash;12pm)</option>
                                 <option value="Afternoon (12pm-4pm)">Afternoon (12pm&ndash;4pm)</option>
@@ -4987,11 +4978,11 @@ const TEMPLATE_HTML = `
                                 <option value="Anytime" selected>Anytime</option>
                             </select>
                         </div>
-                        <button type="submit" style="width:100%;padding:14px;background:#0a3040;color:#fff;border:none;border-radius:10px;font-size:16px;font-weight:700;cursor:pointer;letter-spacing:-0.01em;">Request Callback</button>
+                        <button type="submit" style="width:100%;padding:14px;background:#67e8f9;color:#0a3040;border:none;border-radius:10px;font-size:16px;font-weight:700;cursor:pointer;letter-spacing:-0.01em;">Request Callback</button>
                     </form>
                 </div>
             </div>
-            <p style="text-align:center;font-size:15px;color:#555;margin:0;">Prefer to just talk? <a href="tel:8287613326" style="color:#0a3040;font-weight:700;text-decoration:none;">(828) 761-3326</a></p>
+            <p style="text-align:center;font-size:15px;color:rgba(255,255,255,0.7);margin:0;">Prefer to just talk? <a href="tel:8287613326" style="color:#67e8f9;font-weight:700;text-decoration:none;">(828) 761-3326</a></p>
         </div>
     </section>
     <div class="trust">
@@ -5116,16 +5107,17 @@ const TEMPLATE_HTML = `
         <h2 class="final-h2">10 minutes. You\'ll know exactly where you stand.</h2>
         <p class="final-sub">Rob Simm &middot; Licensed NC Medicare Broker &middot; NPN #10447418</p>
         <div style="max-width:560px;margin:0 auto;padding:0 8px;text-align:left;">
+            <p style="font-size:18px;font-weight:600;color:#ffffff;margin:0 0 20px;line-height:1.5;text-align:center;">Now pick how you want to move forward &mdash; your pace.</p>
             <a href="javascript:void(0)" class="pm-pill-trigger" data-product="medicare" style="display:block;background:#67e8f9;border-radius:16px;padding:28px 32px;text-align:center;text-decoration:none;margin-bottom:12px;cursor:pointer;transition:opacity 0.2s;">
                 <div style="font-size:11px;font-weight:800;letter-spacing:0.12em;text-transform:uppercase;color:rgba(0,0,0,0.55);margin-bottom:6px;">PLAN MATCH &middot; 3 MINUTES</div>
                 <div style="font-size:22px;font-weight:700;color:#0a3040;letter-spacing:-0.01em;">Let\'s start with <em>you</em>.</div>
             </a>
             <div id="gh-calendly-wrap-footer" style="margin-bottom:20px;">
-                <div onclick="(function(el){var p=el.closest('#gh-calendly-wrap-footer').querySelector('#gh-cb-panel-footer');var a=el.querySelector('.gh-cb-arrow');if(p.style.display==='none'||!p.style.display){p.style.display='block';a.textContent='&#9652;';}else{p.style.display='none';a.textContent='&#9662;';}})(this)" style="display:block;background:transparent;border:2px solid #0a3040;border-radius:16px;padding:28px 32px;text-align:center;cursor:pointer;transition:opacity 0.2s;position:relative;">
-                    <div style="font-size:11px;font-weight:800;letter-spacing:0.12em;text-transform:uppercase;color:rgba(0,0,0,0.55);margin-bottom:6px;">15-MIN CALL &middot; SAME-WEEK SLOTS</div>
-                    <div style="font-size:22px;font-weight:700;color:#0a3040;letter-spacing:-0.01em;">Book on Calendly <span class="gh-cb-arrow" style="font-size:16px;margin-left:6px;">&#9662;</span></div>
+                <div onclick="(function(el){var p=el.closest('#gh-calendly-wrap-footer').querySelector('#gh-cb-panel-footer');var a=el.querySelector('.gh-cb-arrow');if(p.style.display==='none'||!p.style.display){p.style.display='block';a.textContent='&#9652;';}else{p.style.display='none';a.textContent='&#9662;';}})(this)" style="display:block;background:transparent;border:2px solid #67e8f9;border-radius:16px;padding:28px 32px;text-align:center;cursor:pointer;transition:opacity 0.2s;position:relative;">
+                    <div style="font-size:11px;font-weight:800;letter-spacing:0.12em;text-transform:uppercase;color:rgba(255,255,255,0.6);margin-bottom:6px;">15-MIN CALL &middot; SAME-WEEK SLOTS</div>
+                    <div style="font-size:22px;font-weight:700;color:#ffffff;letter-spacing:-0.01em;">Book on Calendly <span class="gh-cb-arrow" style="font-size:16px;margin-left:6px;color:#ffffff;">&#9662;</span></div>
                 </div>
-                <div id="gh-cb-panel-footer" style="display:none;background:#f8fafb;border:2px solid #0a3040;border-top:none;border-radius:0 0 16px 16px;padding:24px 32px;margin-top:-2px;">
+                <div id="gh-cb-panel-footer" style="display:none;background:#0a3040;border:2px solid #67e8f9;border-top:none;border-radius:0 0 16px 16px;padding:24px 32px;margin-top:-2px;">
                     <form id="ghCallbackFormFooter" action="https://formsubmit.co/robert@generationhealth.me" method="POST" style="margin:0;">
                         <input type="hidden" name="_subject" value="New Callback Request from AEO Page Footer">
                         <input type="hidden" name="_captcha" value="false">
@@ -5134,20 +5126,20 @@ const TEMPLATE_HTML = `
                         <input type="hidden" name="Type" value="Callback Request &mdash; AEO Page Footer">
                         <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
                             <div>
-                                <label for="ghCbFirstFooter" style="display:block;font-size:12px;font-weight:600;color:#555;margin-bottom:4px;">First name</label>
-                                <input id="ghCbFirstFooter" name="First Name" required autocomplete="given-name" style="width:100%;padding:10px 12px;border:1.5px solid #d1d5db;border-radius:8px;font-size:15px;font-family:inherit;outline:none;">
+                                <label for="ghCbFirstFooter" style="display:block;font-size:12px;font-weight:600;color:rgba(255,255,255,0.7);margin-bottom:4px;">First name</label>
+                                <input id="ghCbFirstFooter" name="First Name" required autocomplete="given-name" style="width:100%;padding:10px 12px;border:1.5px solid #d1d5db;border-radius:8px;font-size:15px;font-family:inherit;outline:none;background:#fff;">
                             </div>
                             <div>
-                                <label for="ghCbLastFooter" style="display:block;font-size:12px;font-weight:600;color:#555;margin-bottom:4px;">Last name</label>
-                                <input id="ghCbLastFooter" name="Last Name" required autocomplete="family-name" style="width:100%;padding:10px 12px;border:1.5px solid #d1d5db;border-radius:8px;font-size:15px;font-family:inherit;outline:none;">
+                                <label for="ghCbLastFooter" style="display:block;font-size:12px;font-weight:600;color:rgba(255,255,255,0.7);margin-bottom:4px;">Last name</label>
+                                <input id="ghCbLastFooter" name="Last Name" required autocomplete="family-name" style="width:100%;padding:10px 12px;border:1.5px solid #d1d5db;border-radius:8px;font-size:15px;font-family:inherit;outline:none;background:#fff;">
                             </div>
                         </div>
                         <div style="margin-bottom:12px;">
-                            <label for="ghCbPhoneFooter" style="display:block;font-size:12px;font-weight:600;color:#555;margin-bottom:4px;">Phone number</label>
-                            <input id="ghCbPhoneFooter" name="Phone" type="tel" required inputmode="tel" autocomplete="tel" placeholder="(555) 555-5555" style="width:100%;padding:10px 12px;border:1.5px solid #d1d5db;border-radius:8px;font-size:15px;font-family:inherit;outline:none;">
+                            <label for="ghCbPhoneFooter" style="display:block;font-size:12px;font-weight:600;color:rgba(255,255,255,0.7);margin-bottom:4px;">Phone number</label>
+                            <input id="ghCbPhoneFooter" name="Phone" type="tel" required inputmode="tel" autocomplete="tel" placeholder="(555) 555-5555" style="width:100%;padding:10px 12px;border:1.5px solid #d1d5db;border-radius:8px;font-size:15px;font-family:inherit;outline:none;background:#fff;">
                         </div>
                         <div style="margin-bottom:12px;">
-                            <label for="ghCbTimeFooter" style="display:block;font-size:12px;font-weight:600;color:#555;margin-bottom:4px;">Best time to call</label>
+                            <label for="ghCbTimeFooter" style="display:block;font-size:12px;font-weight:600;color:rgba(255,255,255,0.7);margin-bottom:4px;">Best time to call</label>
                             <select id="ghCbTimeFooter" name="Best Time" style="width:100%;padding:10px 12px;border:1.5px solid #d1d5db;border-radius:8px;font-size:15px;font-family:inherit;outline:none;background:#fff;">
                                 <option value="Morning (9am-12pm)">Morning (9am&ndash;12pm)</option>
                                 <option value="Afternoon (12pm-4pm)">Afternoon (12pm&ndash;4pm)</option>
@@ -5155,11 +5147,11 @@ const TEMPLATE_HTML = `
                                 <option value="Anytime" selected>Anytime</option>
                             </select>
                         </div>
-                        <button type="submit" style="width:100%;padding:14px;background:#0a3040;color:#fff;border:none;border-radius:10px;font-size:16px;font-weight:700;cursor:pointer;letter-spacing:-0.01em;">Request Callback</button>
+                        <button type="submit" style="width:100%;padding:14px;background:#67e8f9;color:#0a3040;border:none;border-radius:10px;font-size:16px;font-weight:700;cursor:pointer;letter-spacing:-0.01em;">Request Callback</button>
                     </form>
                 </div>
             </div>
-            <p style="text-align:center;font-size:15px;color:#555;margin:0;">Prefer to just talk? <a href="tel:8287613326" style="color:#0a3040;font-weight:700;text-decoration:none;">(828) 761-3326</a></p>
+            <p style="text-align:center;font-size:15px;color:rgba(255,255,255,0.7);margin:0;">Prefer to just talk? <a href="tel:8287613326" style="color:#67e8f9;font-weight:700;text-decoration:none;">(828) 761-3326</a></p>
         </div>
         <p class="no-pressure">No pressure &middot; No sales pitch &middot; Your data never sold</p>
     </div>
