@@ -47,14 +47,6 @@ a{text-decoration:none;}
 .hero-eyebrow{font-size:10px;font-weight:700;color:#83f0f9 !important;letter-spacing:0.16em;text-transform:uppercase;margin-bottom:22px;}
 .hero-h1{font-family:-apple-system,'SF Pro Display',sans-serif;font-size:clamp(32px,5vw,52px);font-weight:700;line-height:1.06;letter-spacing:-0.03em;color:#fff !important;margin-bottom:18px;max-width:720px;margin-left:auto;margin-right:auto;}
 .hero-sub{font-size:17px;font-weight:400;color:rgba(255,255,255,0.65) !important;margin-bottom:42px;max-width:460px;margin-left:auto;margin-right:auto;line-height:1.6;}
-/* ── Split pill — desktop (side by side) ── */
-.split-pill{display:inline-flex;border-radius:100px;overflow:hidden;background:#fff;}
-.pill-left{background:#fff;padding:16px 28px;text-align:left;min-width:220px;}
-.pill-left-q{font-size:9px;font-weight:700;color:#0d2f5e;text-transform:uppercase;letter-spacing:0.12em;margin-bottom:5px;}
-.pill-left-a{font-size:15px;font-weight:700;color:#0d2f5e;line-height:1.2;}
-.pill-right{background:#83f0f9;padding:16px 28px;text-align:center;min-width:180px;display:flex;flex-direction:column;align-items:center;justify-content:center;}
-.pill-right-top{font-size:14px;font-weight:700;color:#0d2f5e;margin-bottom:3px;}
-.pill-right-num{font-size:15px;font-weight:700;color:#0d2f5e;letter-spacing:-0.01em;}
 /* ── Trust strip ── */
 .trust-strip{background:#fff;border-bottom:1px solid #f0f0f0;padding:15px 24px;display:flex;justify-content:center;align-items:center;flex-wrap:wrap;gap:4px;}
 .trust-item{font-size:12px;color:#6e6e73;display:flex;align-items:center;gap:6px;padding:0 10px;}
@@ -118,16 +110,6 @@ a{text-decoration:none;}
 .final-micro{font-size:11px;color:rgba(255,255,255,0.3);margin-top:20px;letter-spacing:0.06em;text-transform:uppercase;}
 /* ── Responsive ── */
 @media(max-width:640px){
-  /* Split pill — mobile: stacked slim pill, wrapper does all rounding */
-  .split-pill{display:flex !important;flex-direction:column !important;border-radius:30px !important;overflow:hidden !important;width:calc(100% - 28px) !important;max-width:400px !important;margin-left:auto !important;margin-right:auto !important;}
-  .pill-left{border-radius:0 !important;padding:7px 20px !important;text-align:center !important;min-width:0 !important;display:flex !important;align-items:center !important;justify-content:center !important;gap:8px !important;}
-  .pill-left-q{font-size:9px !important;font-weight:700 !important;color:#8a8a8e !important;text-transform:uppercase !important;letter-spacing:0.1em !important;margin-bottom:0 !important;}
-  .pill-left-divider{display:inline-block !important;width:1px !important;height:12px !important;background:#e5e5ea !important;margin:0 !important;}
-  .pill-left-a{font-size:12px !important;font-weight:700 !important;color:#0d2f5e !important;line-height:1.2 !important;}
-  .pill-right{border-radius:0 !important;padding:11px 20px !important;min-width:0 !important;}
-  .pill-right-top{font-size:11px !important;letter-spacing:0.1em !important;text-transform:uppercase !important;margin-bottom:2px !important;}
-  .pill-right-num{font-size:17px !important;}
-
   .fear-grid{grid-template-columns:1fr;}
   .scenario-cards{grid-template-columns:1fr;}
   .compare-table{font-size:12px;}
@@ -151,16 +133,52 @@ a{text-decoration:none;}
   <div class="hero-eyebrow" style="color:#83f0f9 !important;">Medicare Broker &middot; {{county}} NC</div>
   <h1 class="hero-h1" style="color:#fff !important;">Which plans actually cover your {{health_system}} doctors?</h1>
   <p class="hero-sub" style="color:rgba(255,255,255,0.65) !important;">I check family history and health risks &mdash; then find the plan that covers what you might need next year, not just today.</p>
-  <div class="split-pill">
-    <div class="pill-left">
-      <div class="pill-left-q">{{health_system}} covered?</div>
-      <span class="pill-left-divider"></span>
-      <div class="pill-left-a">Your specialist might not be.</div>
-    </div>
-    <a href="tel:8287613326" class="pill-right" style="text-decoration:none;">
-      <div class="pill-right-top">Safe Bet. Call Rob.</div>
-      <div class="pill-right-num">(828) 761-3326</div>
+  <div style="max-width:560px !important;margin:0 auto !important;padding:0 8px !important;text-align:left !important;">
+    <p style="font-size:18px !important;font-weight:600 !important;color:#ffffff !important;margin:0 0 20px !important;line-height:1.5 !important;text-align:center !important;">Now pick how you want to move forward &mdash; your pace.</p>
+    <a href="javascript:void(0)" class="pm-pill-trigger" data-product="medicare" style="display:block !important;background:#67e8f9 !important;border-radius:16px !important;padding:28px 32px !important;text-align:center !important;text-decoration:none !important;margin-bottom:12px !important;cursor:pointer !important;transition:opacity 0.2s !important;">
+      <div style="font-size:11px !important;font-weight:800 !important;letter-spacing:0.12em !important;text-transform:uppercase !important;color:rgba(0,0,0,0.55) !important;margin-bottom:6px !important;">PLAN MATCH &middot; 3 MINUTES</div>
+      <div style="font-size:22px !important;font-weight:700 !important;color:#0a3040 !important;letter-spacing:-0.01em !important;">Let's start with <em>you</em>.</div>
     </a>
+    <div id="gh-calendly-wrap" style="margin-bottom:20px !important;">
+      <div onclick="(function(el){var p=el.closest('#gh-calendly-wrap').querySelector('#gh-cb-panel');var a=el.querySelector('.gh-cb-arrow');if(p.style.display==='none'||!p.style.display){p.style.display='block';a.textContent='&#9652;';}else{p.style.display='none';a.textContent='&#9662;';}})(this)" style="display:block !important;background:transparent !important;border:2px solid #67e8f9 !important;border-radius:16px !important;padding:28px 32px !important;text-align:center !important;cursor:pointer !important;transition:opacity 0.2s !important;position:relative !important;">
+        <div style="font-size:11px !important;font-weight:800 !important;letter-spacing:0.12em !important;text-transform:uppercase !important;color:rgba(255,255,255,0.6) !important;margin-bottom:6px !important;">15-MIN CALL &middot; SAME-WEEK SLOTS</div>
+        <div style="font-size:22px !important;font-weight:700 !important;color:#ffffff !important;letter-spacing:-0.01em !important;">Book on Calendly <span class="gh-cb-arrow" style="font-size:16px !important;margin-left:6px !important;color:#ffffff !important;">&#9662;</span></div>
+      </div>
+      <div id="gh-cb-panel" style="display:none;background:#0a3040 !important;border:2px solid #67e8f9 !important;border-top:none !important;border-radius:0 0 16px 16px !important;padding:24px 32px !important;margin-top:-2px !important;">
+        <form id="ghCallbackForm" action="https://formsubmit.co/robert@generationhealth.me" method="POST" style="margin:0 !important;">
+          <input type="hidden" name="_subject" value="New Callback Request from AEO Page">
+          <input type="hidden" name="_captcha" value="false">
+          <input type="hidden" name="_template" value="table">
+          <input type="hidden" name="_next" value="https://generationhealth.me">
+          <input type="hidden" name="Type" value="Callback Request &mdash; AEO Page">
+          <div style="display:grid !important;grid-template-columns:1fr 1fr !important;gap:12px !important;margin-bottom:12px !important;">
+            <div>
+              <label for="ghCbFirst" style="display:block !important;font-size:12px !important;font-weight:600 !important;color:rgba(255,255,255,0.7) !important;margin-bottom:4px !important;">First name</label>
+              <input id="ghCbFirst" name="First Name" required autocomplete="given-name" style="width:100% !important;padding:10px 12px !important;border:1.5px solid #d1d5db !important;border-radius:8px !important;font-size:15px !important;font-family:inherit !important;outline:none !important;background:#fff !important;">
+            </div>
+            <div>
+              <label for="ghCbLast" style="display:block !important;font-size:12px !important;font-weight:600 !important;color:rgba(255,255,255,0.7) !important;margin-bottom:4px !important;">Last name</label>
+              <input id="ghCbLast" name="Last Name" required autocomplete="family-name" style="width:100% !important;padding:10px 12px !important;border:1.5px solid #d1d5db !important;border-radius:8px !important;font-size:15px !important;font-family:inherit !important;outline:none !important;background:#fff !important;">
+            </div>
+          </div>
+          <div style="margin-bottom:12px !important;">
+            <label for="ghCbPhone" style="display:block !important;font-size:12px !important;font-weight:600 !important;color:rgba(255,255,255,0.7) !important;margin-bottom:4px !important;">Phone number</label>
+            <input id="ghCbPhone" name="Phone" type="tel" required inputmode="tel" autocomplete="tel" placeholder="(555) 555-5555" style="width:100% !important;padding:10px 12px !important;border:1.5px solid #d1d5db !important;border-radius:8px !important;font-size:15px !important;font-family:inherit !important;outline:none !important;background:#fff !important;">
+          </div>
+          <div style="margin-bottom:12px !important;">
+            <label for="ghCbTime" style="display:block !important;font-size:12px !important;font-weight:600 !important;color:rgba(255,255,255,0.7) !important;margin-bottom:4px !important;">Best time to call</label>
+            <select id="ghCbTime" name="Best Time" style="width:100% !important;padding:10px 12px !important;border:1.5px solid #d1d5db !important;border-radius:8px !important;font-size:15px !important;font-family:inherit !important;outline:none !important;background:#fff !important;">
+              <option value="Morning (9am-12pm)">Morning (9am&ndash;12pm)</option>
+              <option value="Afternoon (12pm-4pm)">Afternoon (12pm&ndash;4pm)</option>
+              <option value="Evening (4pm-7pm)">Evening (4pm&ndash;7pm)</option>
+              <option value="Anytime" selected>Anytime</option>
+            </select>
+          </div>
+          <button type="submit" style="width:100% !important;padding:14px !important;background:#67e8f9 !important;color:#0a3040 !important;border:none !important;border-radius:10px !important;font-size:16px !important;font-weight:700 !important;cursor:pointer !important;letter-spacing:-0.01em !important;">Request Callback</button>
+        </form>
+      </div>
+    </div>
+    <p style="text-align:center !important;font-size:15px !important;color:rgba(255,255,255,0.7) !important;margin:0 !important;">Prefer to just talk? <a href="tel:8287613326" style="color:#67e8f9 !important;font-weight:700 !important;text-decoration:none !important;">(828) 761-3326</a></p>
   </div>
 </div>
 <div class="trust-strip">
@@ -308,15 +326,51 @@ a{text-decoration:none;}
     <div style="max-width:480px !important;margin:0 auto !important;width:100% !important;box-sizing:border-box !important;">
       <div style="font-family:-apple-system,'SF Pro Display',sans-serif !important;font-size:22px !important;font-weight:700 !important;color:#fff !important;line-height:1.2 !important;letter-spacing:-0.02em !important;margin-bottom:8px !important;text-align:center !important;">10 minutes. You&#39;ll know where you stand.</div>
       <div style="font-size:13px !important;color:rgba(255,255,255,0.45) !important;text-align:center !important;margin-bottom:24px !important;line-height:1.5 !important;">Rob Simm &middot; Licensed NC Medicare Broker &middot; NPN #10447418</div>
-      <div style="display:flex !important;flex-direction:column !important;gap:10px !important;width:100% !important;box-sizing:border-box !important;">
-        <a href="tel:8287613326" style="display:flex !important;flex-direction:column !important;align-items:center !important;justify-content:center !important;padding:16px 20px !important;background:#83f0f9 !important;border-radius:100px !important;text-decoration:none !important;width:100% !important;box-sizing:border-box !important;">
-          <div style="font-size:10px !important;font-weight:700 !important;color:#0d2f5e !important;letter-spacing:0.1em !important;text-transform:uppercase !important;margin-bottom:3px !important;">Call Rob directly</div>
-          <div style="font-size:19px !important;font-weight:700 !important;color:#0d2f5e !important;">(828) 761-3326</div>
-        </a>
-        <a href="sms:8287613326" style="display:flex !important;align-items:center !important;justify-content:center !important;padding:14px 20px !important;background:rgba(255,255,255,0.06) !important;border:1.5px solid rgba(255,255,255,0.18) !important;border-radius:100px !important;color:#fff !important;font-size:14px !important;font-weight:600 !important;text-decoration:none !important;width:100% !important;box-sizing:border-box !important;">Text Us</a>
-        <a href="https://calendly.com/robert-generationhealth/new-meeting" style="display:flex !important;align-items:center !important;justify-content:center !important;padding:14px 20px !important;background:rgba(255,255,255,0.06) !important;border:1.5px solid rgba(255,255,255,0.18) !important;border-radius:100px !important;color:#fff !important;font-size:14px !important;font-weight:600 !important;text-decoration:none !important;width:100% !important;box-sizing:border-box !important;">Book a Free Call</a>
-        <a href="https://www.sunfirematrix.com/app/consumer/medicareadvocates/10447418/#/" style="display:flex !important;align-items:center !important;justify-content:center !important;padding:14px 20px !important;background:rgba(131,240,249,0.08) !important;border:1.5px solid rgba(131,240,249,0.25) !important;border-radius:100px !important;color:#83f0f9 !important;font-size:14px !important;font-weight:600 !important;text-decoration:none !important;width:100% !important;box-sizing:border-box !important;">Compare Plans &mdash; SunFire &rarr;</a>
+      <p style="font-size:18px !important;font-weight:600 !important;color:#ffffff !important;margin:0 0 20px !important;line-height:1.5 !important;text-align:center !important;">Now pick how you want to move forward &mdash; your pace.</p>
+      <a href="javascript:void(0)" class="pm-pill-trigger" data-product="medicare" style="display:block !important;background:#67e8f9 !important;border-radius:16px !important;padding:28px 32px !important;text-align:center !important;text-decoration:none !important;margin-bottom:12px !important;cursor:pointer !important;transition:opacity 0.2s !important;">
+        <div style="font-size:11px !important;font-weight:800 !important;letter-spacing:0.12em !important;text-transform:uppercase !important;color:rgba(0,0,0,0.55) !important;margin-bottom:6px !important;">PLAN MATCH &middot; 3 MINUTES</div>
+        <div style="font-size:22px !important;font-weight:700 !important;color:#0a3040 !important;letter-spacing:-0.01em !important;">Let's start with <em>you</em>.</div>
+      </a>
+      <div id="gh-calendly-wrap-footer" style="margin-bottom:20px !important;text-align:left !important;">
+        <div onclick="(function(el){var p=el.closest('#gh-calendly-wrap-footer').querySelector('#gh-cb-panel-footer');var a=el.querySelector('.gh-cb-arrow');if(p.style.display==='none'||!p.style.display){p.style.display='block';a.textContent='&#9652;';}else{p.style.display='none';a.textContent='&#9662;';}})(this)" style="display:block !important;background:transparent !important;border:2px solid #67e8f9 !important;border-radius:16px !important;padding:28px 32px !important;text-align:center !important;cursor:pointer !important;transition:opacity 0.2s !important;position:relative !important;">
+          <div style="font-size:11px !important;font-weight:800 !important;letter-spacing:0.12em !important;text-transform:uppercase !important;color:rgba(255,255,255,0.6) !important;margin-bottom:6px !important;">15-MIN CALL &middot; SAME-WEEK SLOTS</div>
+          <div style="font-size:22px !important;font-weight:700 !important;color:#ffffff !important;letter-spacing:-0.01em !important;">Book on Calendly <span class="gh-cb-arrow" style="font-size:16px !important;margin-left:6px !important;color:#ffffff !important;">&#9662;</span></div>
+        </div>
+        <div id="gh-cb-panel-footer" style="display:none;background:#0a3040 !important;border:2px solid #67e8f9 !important;border-top:none !important;border-radius:0 0 16px 16px !important;padding:24px 32px !important;margin-top:-2px !important;">
+          <form id="ghCallbackFormFooter" action="https://formsubmit.co/robert@generationhealth.me" method="POST" style="margin:0 !important;">
+            <input type="hidden" name="_subject" value="New Callback Request from AEO Page Footer">
+            <input type="hidden" name="_captcha" value="false">
+            <input type="hidden" name="_template" value="table">
+            <input type="hidden" name="_next" value="https://generationhealth.me">
+            <input type="hidden" name="Type" value="Callback Request &mdash; AEO Page Footer">
+            <div style="display:grid !important;grid-template-columns:1fr 1fr !important;gap:12px !important;margin-bottom:12px !important;">
+              <div>
+                <label for="ghCbFirstFooter" style="display:block !important;font-size:12px !important;font-weight:600 !important;color:rgba(255,255,255,0.7) !important;margin-bottom:4px !important;">First name</label>
+                <input id="ghCbFirstFooter" name="First Name" required autocomplete="given-name" style="width:100% !important;padding:10px 12px !important;border:1.5px solid #d1d5db !important;border-radius:8px !important;font-size:15px !important;font-family:inherit !important;outline:none !important;background:#fff !important;">
+              </div>
+              <div>
+                <label for="ghCbLastFooter" style="display:block !important;font-size:12px !important;font-weight:600 !important;color:rgba(255,255,255,0.7) !important;margin-bottom:4px !important;">Last name</label>
+                <input id="ghCbLastFooter" name="Last Name" required autocomplete="family-name" style="width:100% !important;padding:10px 12px !important;border:1.5px solid #d1d5db !important;border-radius:8px !important;font-size:15px !important;font-family:inherit !important;outline:none !important;background:#fff !important;">
+              </div>
+            </div>
+            <div style="margin-bottom:12px !important;">
+              <label for="ghCbPhoneFooter" style="display:block !important;font-size:12px !important;font-weight:600 !important;color:rgba(255,255,255,0.7) !important;margin-bottom:4px !important;">Phone number</label>
+              <input id="ghCbPhoneFooter" name="Phone" type="tel" required inputmode="tel" autocomplete="tel" placeholder="(555) 555-5555" style="width:100% !important;padding:10px 12px !important;border:1.5px solid #d1d5db !important;border-radius:8px !important;font-size:15px !important;font-family:inherit !important;outline:none !important;background:#fff !important;">
+            </div>
+            <div style="margin-bottom:12px !important;">
+              <label for="ghCbTimeFooter" style="display:block !important;font-size:12px !important;font-weight:600 !important;color:rgba(255,255,255,0.7) !important;margin-bottom:4px !important;">Best time to call</label>
+              <select id="ghCbTimeFooter" name="Best Time" style="width:100% !important;padding:10px 12px !important;border:1.5px solid #d1d5db !important;border-radius:8px !important;font-size:15px !important;font-family:inherit !important;outline:none !important;background:#fff !important;">
+                <option value="Morning (9am-12pm)">Morning (9am&ndash;12pm)</option>
+                <option value="Afternoon (12pm-4pm)">Afternoon (12pm&ndash;4pm)</option>
+                <option value="Evening (4pm-7pm)">Evening (4pm&ndash;7pm)</option>
+                <option value="Anytime" selected>Anytime</option>
+              </select>
+            </div>
+            <button type="submit" style="width:100% !important;padding:14px !important;background:#67e8f9 !important;color:#0a3040 !important;border:none !important;border-radius:10px !important;font-size:16px !important;font-weight:700 !important;cursor:pointer !important;letter-spacing:-0.01em !important;">Request Callback</button>
+          </form>
+        </div>
       </div>
+      <p style="text-align:center !important;font-size:15px !important;color:rgba(255,255,255,0.7) !important;margin:0 !important;">Prefer to just talk? <a href="tel:8287613326" style="color:#67e8f9 !important;font-weight:700 !important;text-decoration:none !important;">(828) 761-3326</a></p>
       <div style="font-size:10px !important;font-weight:700 !important;color:rgba(255,255,255,0.45) !important;text-align:center !important;letter-spacing:0.07em !important;text-transform:uppercase !important;margin-top:14px !important;">No pressure &middot; No sales pitch &middot; Your data never sold</div>
     </div>
   </div>
