@@ -38,6 +38,15 @@ export interface ContextualLink {
 // Longer/more specific phrases should come before shorter ones
 // ═══════════════════════════════════════════════════════════════════════════
 
+// Slug whitelist enforcement: every URL below MUST resolve to a slug on the
+// CONFIRMED_SLUGS list in src/lib/aeoQa.ts. Four prior entries pointed to
+// pages not on the whitelist and have been remapped or removed:
+//   - "Special Enrollment Period"  : was /medicare-advantage-quotes-nc/        → remapped to /medicare-special-enrollment-periods-in-north-carolina-2026-guide/
+//   - "Annual Enrollment Period"   : was /medicare-advantage-quotes-nc/        → remapped to /medicare-enrollment-in-north-carolina-complete-guide-for-2026/
+//   - "Medicare enrollment"        : was /how-to-sign-up-for-medicare-parts-a-and-b/ → remapped to /medicare-enrollment-in-north-carolina-complete-guide-for-2026/
+//   - "drug formularies"           : was /whats-the-best-insurance-to-go-with-medicare/ → REMOVED (no whitelist target)
+//   - "Part D"                     : was /medicare-plans-in-north-carolina/    → REMOVED (no whitelist target)
+// New whitelist-resident entries added: late enrollment penalty, working past 65, Medicare Advantage costs.
 export const CONTEXTUAL_LINKS: ContextualLink[] = [
   // ── Medigap (specific before general) ───────────────────────────────────
   {
@@ -58,47 +67,52 @@ export const CONTEXTUAL_LINKS: ContextualLink[] = [
     phrase: 'Medicare Advantage',
     url: 'https://generationhealth.me/how-to-compare-medicare-advantage-plans-in-north-carolina/',
   },
-
-  // ── Enrollment periods ───────────────────────────────────────────────────
-  {
-    phrase: 'Special Enrollment Period',
-    url: 'https://generationhealth.me/medicare-advantage-quotes-nc/',
-  },
-  {
-    phrase: 'Annual Enrollment Period',
-    url: 'https://generationhealth.me/medicare-advantage-quotes-nc/',
-  },
-
-  // ── Plan mechanics ───────────────────────────────────────────────────────
-  {
-    phrase: 'drug formularies',
-    url: 'https://generationhealth.me/whats-the-best-insurance-to-go-with-medicare/',
-  },
   {
     phrase: 'prior authorization',
     url: 'https://generationhealth.me/how-to-compare-medicare-advantage-plans-in-north-carolina/',
   },
+
+  // ── Enrollment periods (whitelist-only) ─────────────────────────────────
   {
-    phrase: 'Part D',
-    url: 'https://generationhealth.me/medicare-plans-in-north-carolina/',
+    phrase: 'Special Enrollment Period',
+    url: 'https://generationhealth.me/medicare-special-enrollment-periods-in-north-carolina-2026-guide/',
+  },
+  {
+    phrase: 'Annual Enrollment Period',
+    url: 'https://generationhealth.me/medicare-enrollment-in-north-carolina-complete-guide-for-2026/',
+  },
+  {
+    phrase: 'Medicare enrollment',
+    url: 'https://generationhealth.me/medicare-enrollment-in-north-carolina-complete-guide-for-2026/',
+  },
+  {
+    phrase: 'Initial Enrollment Period',
+    url: 'https://generationhealth.me/medicare-enrollment-in-north-carolina-complete-guide-for-2026/',
   },
 
-  // ── Enrollment / quotes ──────────────────────────────────────────────────
+  // ── Penalties (whitelist-only) ──────────────────────────────────────────
+  {
+    phrase: 'late enrollment penalty',
+    url: 'https://generationhealth.me/medicare-premium-penalties-north-carolina-2026-late-enrollment-guide/',
+  },
+
+  // ── Working past 65 (whitelist-only) ────────────────────────────────────
+  {
+    phrase: 'working past 65',
+    url: 'https://generationhealth.me/working-past-65-medicare-enrollment-in-north-carolina/',
+  },
+
+  // ── Costs (whitelist-only) ──────────────────────────────────────────────
+  {
+    phrase: 'Medicare costs',
+    url: 'https://generationhealth.me/medicare-costs-north-carolina-2026-complete-guide/',
+  },
+
+  // ── Quotes (whitelist-only) ─────────────────────────────────────────────
   {
     phrase: 'compare plans',
     url: 'https://generationhealth.me/free-medicare-quotes-online/',
   },
-  {
-    phrase: 'Medicare enrollment',
-    url: 'https://generationhealth.me/how-to-sign-up-for-medicare-parts-a-and-b/',
-  },
-
-  // ── Add new links below as pages go live ─────────────────────────────────
-  // { phrase: 'ACA subsidy',         url: 'https://generationhealth.me/your-aca-page/' },
-  // { phrase: 'turning 65',          url: 'https://generationhealth.me/your-turning-65-page/' },
-  // { phrase: 'late enrollment penalty', url: 'https://generationhealth.me/your-penalty-page/' },
-  // { phrase: 'Medicare Part B',     url: 'https://generationhealth.me/your-part-b-page/' },
-  // { phrase: 'out-of-pocket maximum', url: 'https://generationhealth.me/your-costs-page/' },
 ];
 
 // ═══════════════════════════════════════════════════════════════════════════

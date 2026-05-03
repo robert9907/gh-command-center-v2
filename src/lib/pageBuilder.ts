@@ -76,9 +76,15 @@ const COUNTY_KEYWORD_CLUSTERS: Record<string, string[]> = {
   orange:      ['orange', 'chapel-hill'],
 };
 
+// Slug whitelist enforcement: every URL below MUST resolve to a slug on the
+// CONFIRMED_SLUGS list in src/lib/aeoQa.ts. The prior entry
+// /how-to-sign-up-for-medicare-parts-a-and-b/ was off-whitelist and has been
+// replaced with two whitelist-resident entries (SEP guide + late-enrollment
+// penalty guide), bringing the total to 7 fallbacks.
 const FALLBACK_GUIDES = [
   { url: 'https://generationhealth.me/medicare-enrollment-in-north-carolina-complete-guide-for-2026/', label: 'Medicare Enrollment in NC' },
-  { url: 'https://generationhealth.me/how-to-sign-up-for-medicare-parts-a-and-b/', label: 'How to Sign Up for Medicare' },
+  { url: 'https://generationhealth.me/medicare-special-enrollment-periods-in-north-carolina-2026-guide/', label: 'Special Enrollment Periods (NC 2026)' },
+  { url: 'https://generationhealth.me/medicare-premium-penalties-north-carolina-2026-late-enrollment-guide/', label: 'Late Enrollment Penalties (NC 2026)' },
   { url: 'https://generationhealth.me/medigap-plans-in-north-carolina-plan-g-vs-plan-n/', label: 'Medigap Plan G vs N' },
   { url: 'https://generationhealth.me/how-to-compare-medicare-advantage-plans-in-north-carolina/', label: 'Compare Medicare Advantage Plans' },
   { url: 'https://generationhealth.me/medicare-costs-north-carolina-2026-complete-guide/', label: 'Medicare Costs NC 2026' },
